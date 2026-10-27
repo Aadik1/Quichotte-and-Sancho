@@ -1,0 +1,6629 @@
+#LyX 2.4 created this file. For more info see https://www.lyx.org/
+\lyxformat 620
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\usepackage{array}\usepackage{enumitem}
+\usepackage{xcolor}
+
+
+
+\setlength{\parskip}{0.5em}
+
+\title{\textbf{QUICHOTTE}\\[0.3em]
+\large QUantum Interacting CHains: Out-of-equilibrium TransporT\\[0.2em]
+\normalsize User manual}
+\author{Aadi Konidena, King's College London}
+\date{October 2026}
+\end_preamble
+\use_default_options false
+\begin_modules
+logicalmkup
+\end_modules
+\maintain_unincluded_children no
+\language english
+\language_package none
+\inputencoding utf8
+\fontencoding default
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_roman_osf false
+\font_sans_osf false
+\font_typewriter_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref true
+\pdf_bookmarks false
+\pdf_bookmarksnumbered false
+\pdf_bookmarksopen false
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder false
+\pdf_colorlinks true
+\pdf_backref section
+\pdf_pdfusetitle false
+\pdf_quoted_options "linkcolor=blue!50!black,urlcolor=blue!50!black"
+\papersize a4
+\use_geometry true
+\use_package amsmath 2
+\use_package amssymb 2
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 0
+\use_package mathtools 0
+\use_package mhchem 0
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\use_formatted_ref 0
+\use_minted 0
+\use_lineno 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2.4cm
+\topmargin 2.4cm
+\rightmargin 2.4cm
+\bottommargin 2.4cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation 0pt
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tablestyle default
+\tracking_changes false
+\output_changes false
+\change_bars false
+\postpone_fragile_content true
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\docbook_table_output 0
+\docbook_mathml_prefix 1
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\Gr}{G^{r}}
+\end_inset
+
+ 
+\begin_inset FormulaMacro
+\newcommand{\Ga}{G^{a}}
+\end_inset
+
+ 
+\begin_inset FormulaMacro
+\newcommand{\Gl}{G^{<}}
+\end_inset
+
+ 
+\begin_inset FormulaMacro
+\newcommand{\Gg}{G^{>}}
+\end_inset
+
+ 
+\begin_inset FormulaMacro
+\newcommand{\Tr}{\operatorname{Tr}}
+\end_inset
+
+ 
+\begin_inset FormulaMacro
+\newcommand{\adj}{\operatorname{adj}}
+\end_inset
+
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+sloppy
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+maketitle
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Abstract
+QUICHOTTE computes the spin-resolved current–voltage characteristics of a helical molecule with spin–orbit coupling (SOC) and an on-site Hubbard interaction,
+ coupled to two leads.
+ It uses self-consistent non-equilibrium Green's functions (NEGF),
+ with the interaction treated to zeroth,
+ first (Hartree–Fock) or second order in
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $U$
+\end_inset
+
+.
+ The code was written to study chirality-induced spin selectivity (CISS).
+ This manual gives the model,
+ the equations the code solves,
+ the numerical methods,
+ a complete reference for the input and output files,
+ and the practical workflow.
+ The companion code 
+\emph on
+SANCHO
+\emph default
+ (in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+SANCHO/
+\end_layout
+
+\end_inset
+
+) treats a spinless chain to third order in
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $U$
+\end_inset
+
+ and has its own manual.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Quick start
+\end_layout
+
+\begin_layout Verbatim
+git clone https://github.com/Aadik1/QUICHOTTE.git && cd QUICHOTTE
+\end_layout
+
+\begin_layout Verbatim
+make            # builds bin/quichotte.x (needs gfortran,
+ BLAS/LAPACK,
+ FFTW3)
+\end_layout
+
+\begin_layout Verbatim
+make test       # 5 regression tests,
+ a few seconds;
+ all must PASS
+\end_layout
+
+\begin_layout Verbatim
+
+\end_layout
+
+\begin_layout Verbatim
+mkdir -p ~/runs/first && cd ~/runs/first
+\end_layout
+
+\begin_layout Verbatim
+cp ~/QUICHOTTE/examples/helix_4x2_order2/input.dat .
+     # edit as needed
+\end_layout
+
+\begin_layout Verbatim
+OMP_NUM_THREADS=4 ~/QUICHOTTE/bin/quichotte.x
+\end_layout
+
+\begin_layout Standard
+Each run lives in its own directory,
+ 
+\emph on
+outside
+\emph default
+ the repository,
+ which holds only its 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+input.dat
+\end_layout
+
+\end_inset
+
+.
+ All results are written to that directory (Section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:output"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Paragraph
+Build requirements.
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="3">
+<features booktabs="true" tabularvalignment="middle">
+<column alignment="left" valignment="top">
+<column alignment="left" valignment="top">
+<column alignment="left" valignment="top">
+<row>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+platform 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+build command 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+needs 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+macOS 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+brew install gcc openblas fftw
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Linux 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+gfortran
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+libopenblas-dev
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+libfftw3-dev
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+KCL CREATE 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make PLATFORM=create
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+source hpc/create/modules.sh
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ARCHER2 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make PLATFORM=archer2
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+source hpc/archer2/modules.sh
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compiler flags and library paths for each platform are in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make/<platform>.mk
+\end_layout
+
+\end_inset
+
+.
+ Any Fortran 2008 compiler with OpenMP should work.
+\end_layout
+
+\begin_layout Section
+Model
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:model"
+
+\end_inset
+
+
+\end_layout
+
+
+\begin_layout Subsection
+Units and conventions
+\end_layout
+
+\begin_layout Standard
+Energies are in eV,
+ voltages in V and temperatures in K.
+ The code uses 
+\begin_inset Formula $\hbar=e=1$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hbar
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $=1$
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/constants.f90
+\end_layout
+
+\end_inset
+
+);
+ the factors of 
+\begin_inset Formula $\hbar$
+\end_inset
+
+ are kept in the equations below and in the source,
+ so that they can be restored.
+ 
+\begin_inset Formula $k_{B}=8.6173303\times10^{-5}$
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+eV/K.
+\end_layout
+
+\begin_layout Subsection
+Basis
+\end_layout
+
+\begin_layout Standard
+The molecule has 
+\begin_inset Formula $N_{\text{sites}}=N_{\text{ions}}\,N_{\text{turns}}$
+\end_inset
+
+ sites with one orbital each.
+ Every site carries two spin-orbitals,
+ numbered 
+\begin_inset Formula 
+\[
+2i-1=(i,\uparrow),\qquad2i=(i,\downarrow),\qquad i=1,\dots,N_{\text{sites}},
+\]
+
+\end_inset
+
+so all matrices have dimension 
+\begin_inset Formula $N_{\text{orb}}=2N_{\text{sites}}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Norb
+\end_layout
+
+\end_inset
+
+ in the code).
+ The spin quantisation axis is 
+\begin_inset Formula $z$
+\end_inset
+
+,
+ the helix axis.
+\end_layout
+
+\begin_layout Subsection
+Helix geometry
+\end_layout
+
+\begin_layout Standard
+Site 
+\begin_inset Formula $i$
+\end_inset
+
+ sits at (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helix_coordinate
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+) 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{r}_{i}=\Bigl(R\cos\phi_{i},\;R\sin\phi_{i},\;(i-1)\,\Delta z\Bigr),\qquad\phi_{i}=h\,\frac{2\pi(i-1)}{N_{\text{ions}}},\qquad\Delta z=\frac{L}{N_{\text{turns}}(N_{\text{ions}}-1)},
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $R$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_radius
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $L$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_length
+\end_layout
+
+\end_inset
+
+,
+ and 
+\begin_inset Formula $h=\pm1$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hand
+\end_layout
+
+\end_inset
+
+ (right/left-handed).
+ For a single turn 
+\begin_inset Formula $L$
+\end_inset
+
+ is exactly the end-to-end length;
+ for 
+\begin_inset Formula $N_{\text{turns}}$
+\end_inset
+
+ turns the end-to-end length is 
+\begin_inset Formula $L\,(N_{\text{sites}}-1)/\bigl(N_{\text{turns}}(N_{\text{ions}}-1)\bigr)$
+\end_inset
+
+,
+ so the helix becomes slightly longer than 
+\begin_inset Formula $L$
+\end_inset
+
+ (for example 
+\begin_inset Formula $5.83$
+\end_inset
+
+ for 
+\begin_inset Formula $L=5$
+\end_inset
+
+,
+ 
+\begin_inset Formula $N_{\text{ions}}=4$
+\end_inset
+
+,
+ 
+\begin_inset Formula $N_{\text{turns}}=2$
+\end_inset
+
+).
+ Only unit vectors along bonds enter the Hamiltonian,
+ so the SOC depends on the 
+\emph on
+shape
+\emph default
+ of the helix (the ratio of 
+\begin_inset Formula $\Delta z$
+\end_inset
+
+ to 
+\begin_inset Formula $R$
+\end_inset
+
+),
+ not on its overall size.
+\end_layout
+
+\begin_layout Subsection
+Hamiltonian
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+H=\sum_{i\sigma}\varepsilon\,c_{i\sigma}^{\dagger}c_{i\sigma}+t\sum_{i\sigma}\bigl(c_{i\sigma}^{\dagger}c_{i+1,\sigma}+\text{h.c.}\bigr)+\sum_{i}\bigl(c_{i}^{\dagger}\,\mathcal{V}_{i,i+2}\,c_{i+2}+\text{h.c.}\bigr)+\sum_{i}U_{i}\,n_{i\uparrow}n_{i\downarrow},
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $\varepsilon$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+E_CC
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $t$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+,
+ and the next-nearest-neighbour spin–orbit term (a 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ matrix in spin space) 
+\begin_inset Formula 
+\begin{equation}
+\mathcal{V}_{i,i+2}=i\lambda\;\bigl(\hat{\mathbf{d}}_{i,i+1}\times\hat{\mathbf{d}}_{i,i+2}\bigr)\cdot\boldsymbol{\sigma},\qquad\hat{\mathbf{d}}_{i,j}=\frac{\mathbf{r}_{i}-\mathbf{r}_{j}}{|\mathbf{r}_{i}-\mathbf{r}_{j}|},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lamb
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{\sigma}$
+\end_inset
+
+ are the Pauli matrices (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+soc_matrix_elements
+\end_layout
+
+\end_inset
+
+).
+ The non-interacting part is built by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian
+\end_layout
+
+\end_inset
+
+;
+ the Hubbard term enters only through the self-energy (Section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:sigma"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+ 
+\begin_inset Formula $U_{i}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+U_int
+\end_layout
+
+\end_inset
+
+ on every site,
+ or one value per site from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+
+\begin_layout Standard
+This is the helix model built by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian
+\end_layout
+
+\end_inset
+
+.
+ Nothing else in the code depends on it: any other single-particle Hamiltonian can be used instead, as described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Leads
+\end_layout
+
+\begin_layout Standard
+Both leads are in the wide-band limit.
+ The left lead couples to site
+\begin_inset space ~
+\end_inset
+
+1 with a spin-dependent strength,
+ and the right lead couples to the last site:
+ 
+\begin_inset Formula 
+\begin{equation}
+\Gamma_{L}=\operatorname{diag}(\Gamma_{L\uparrow},\Gamma_{L\downarrow},0,\dots,0),\qquad\Gamma_{R}=\operatorname{diag}(0,\dots,0,\Gamma_{R},\Gamma_{R}),
+\end{equation}
+
+\end_inset
+
+(
+\begin_inset Formula $\Gamma_{L\uparrow}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL_up
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Gamma_{L\downarrow}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL_down
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Gamma_{R}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaR
+\end_layout
+
+\end_inset
+
+).
+ Their retarded self-energy is 
+\begin_inset Formula $\Sigma_{\text{leads}}^{r}=-\tfrac{i}{2}(\Gamma_{L}+\Gamma_{R})$
+\end_inset
+
+.
+ The bias is applied to the 
+\emph on
+left
+\emph default
+ lead only:
+ 
+\begin_inset Formula 
+\begin{equation}
+f_{L}(\omega)=\frac{1}{e^{\beta(\omega-\mu+V)}+1},\qquad f_{R}(\omega)=\frac{1}{e^{\beta(\omega-\mu)}+1},\qquad\beta=1/k_{B}T,
+\end{equation}
+
+\end_inset
+
+i.e.
+\begin_inset space \space{}
+\end_inset
+
+
+\begin_inset Formula $\mu_{L}=\mu-V$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\mu_{R}=\mu$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+fermi
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/green_functions.f90
+\end_layout
+
+\end_inset
+
+).
+ Because the bias is asymmetric,
+ the 
+\begin_inset Formula $I$
+\end_inset
+
+–
+\begin_inset Formula $V$
+\end_inset
+
+ curve need not be odd in 
+\begin_inset Formula $V$
+\end_inset
+
+ once 
+\begin_inset Formula $U\neq0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Non-equilibrium Green's functions
+\end_layout
+
+\begin_layout Subsection
+Energy grid
+\end_layout
+
+\begin_layout Standard
+All functions of energy are stored on the uniform grid 
+\begin_inset Formula 
+\begin{equation}
+\omega_{k}=\omega_{\text{init}}+k\,\delta,\qquad k=1,\dots,N_{\omega},\qquad\omega_{\text{init}}=\epsilon_{\text{min}}-\code{dw},\qquad N_{\omega}=\Bigl\lfloor\frac{\epsilon_{\text{max}}+\code{up}-\omega_{\text{init}}}{\delta}\Bigr\rfloor,
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\epsilon_{\text{min,max}}$
+\end_inset
+
+ are the extreme eigenvalues of 
+\begin_inset Formula $H$
+\end_inset
+
+ and 
+\begin_inset Formula $\delta$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delta
+\end_layout
+
+\end_inset
+
+.
+ The margins 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dw
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+up
+\end_layout
+
+\end_inset
+
+ must contain the broadened spectrum (the sanity check of Section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:sanity"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ warns if spectral weight is missing).
+\end_layout
+
+\begin_layout Subsection
+Dyson and Keldysh equations
+\end_layout
+
+\begin_layout Standard
+At every grid energy (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+interacting_gf
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/scf.f90
+\end_layout
+
+\end_inset
+
+):
+ 
+\begin_inset Formula 
+\begin{align}
+\Gr(\omega) & =\Bigl[\hbar\omega-H+\tfrac{i}{2\hbar}(\Gamma_{L}+\Gamma_{R})-\Sigma^{r}(\omega)\Bigr]^{-1},\qquad\Ga(\omega)=\bigl[\Gr(\omega)\bigr]^{\dagger},\label{eq:dyson}\\
+\Gl(\omega) & =\Gr(\omega)\Bigl[\tfrac{i}{\hbar}\bigl(f_{L}(\omega)\Gamma_{L}+f_{R}(\omega)\Gamma_{R}\bigr)+\Sigma^{<}(\omega)\Bigr]\Ga(\omega),\label{eq:keldysh}\\
+\Gg(\omega) & =\Gl(\omega)+\Gr(\omega)-\Ga(\omega).\label{eq:greater}
+\end{align}
+
+\end_inset
+
+The non-interacting functions 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+noninteracting_gr_ga
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+noninteracting_gl_gg
+\end_layout
+
+\end_inset
+
+) are the same equations with 
+\begin_inset Formula $\Sigma=0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Equal-time quantities
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\Gl(t{=}0)=\frac{\delta}{2\pi}\sum_{k}\Gl(\omega_{k}),\qquad n_{i\sigma}=-i\hbar\,\Gl_{i\sigma,i\sigma}(t{=}0),\qquad\langle S_{\alpha}\rangle_{i}=-\frac{i\hbar^{2}}{2}\Tr_{\sigma}\!\bigl[\sigma_{\alpha}\,\Gl_{ii}(t{=}0)\bigr],
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\Gl_{ii}$
+\end_inset
+
+ is the 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ spin block of site 
+\begin_inset Formula $i$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+equal_time_lesser
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+spin_texture
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Current
+\end_layout
+
+\begin_layout Standard
+The spin-resolved particle current through the left lead is (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Current
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+current_integrand
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/observables.f90
+\end_layout
+
+\end_inset
+
+) 
+\begin_inset Formula 
+\begin{equation}
+J_{\sigma}=\frac{1}{\hbar}\frac{\delta}{2\pi}\sum_{k}\operatorname{Re}\Tr_{\sigma}\Bigl\{ i\,\Gamma_{L}\Bigl[\bigl(f_{L}(\omega_{k})-1\bigr)\Gl(\omega_{k})-f_{L}(\omega_{k})\,\Gg(\omega_{k})\Bigr]\Bigr\},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\Tr_{\sigma}$
+\end_inset
+
+ sums over the spin-
+\begin_inset Formula $\sigma$
+\end_inset
+
+ orbitals only.
+ Using Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:greater"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+,
+ the bracket is 
+\begin_inset Formula $-\bigl[\Gl+f_{L}(\Gr-\Ga)\bigr]$
+\end_inset
+
+,
+ so this is minus the Meir–Wingreen expression 
+\begin_inset Formula $\tfrac{i}{\hbar}\int\!\tfrac{d\omega}{2\pi}\Tr\{\Gamma_{L}[\Gl+f_{L}(\Gr-\Ga)]\}$
+\end_inset
+
+.
+ With this sign the current is positive for 
+\begin_inset Formula $V>0$
+\end_inset
+
+.
+ The output also gives 
+\begin_inset Formula $J=J_{\uparrow}+J_{\downarrow}$
+\end_inset
+
+;
+ the spin polarisation is 
+\begin_inset Formula $J_{\uparrow}-J_{\downarrow}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Interaction self-energies
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:sigma"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+All self-energies are functionals of the 
+\emph on
+input
+\emph default
+ Green's functions of the current SCF step,
+ 
+\begin_inset Formula $G_{\text{in}}$
+\end_inset
+
+ (Section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:scf"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+),
+ and are evaluated in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/self_energies.f90
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+First order (Hartree–Fock),
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\ge1$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first-order term is static and local to each site.
+ With 
+\begin_inset Formula $\rho_{i}=-i\hbar\,\Gl_{ii}(t{=}0)$
+\end_inset
+
+ the 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ density matrix of site 
+\begin_inset Formula $i$
+\end_inset
+
+,
+ 
+\begin_inset Formula 
+\begin{equation}
+\Sigma_{i\sigma,i\sigma'}^{(1)}=i\hbar\,U_{i}\Bigl[\Gl_{i\sigma,i\sigma'}(0)-\delta_{\sigma\sigma'}\Tr\Gl_{ii}(0)\Bigr]\;=\;U_{i}\bigl[\delta_{\sigma\sigma'}\Tr\rho_{i}-\rho_{i,\sigma\sigma'}\bigr],
+\end{equation}
+
+\end_inset
+
+i.e.
+\begin_inset space \space{}
+\end_inset
+
+
+\begin_inset Formula $\Sigma_{\uparrow\uparrow}=Un_{\downarrow}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Sigma_{\downarrow\downarrow}=Un_{\uparrow}$
+\end_inset
+
+ (Hartree) and 
+\begin_inset Formula $\Sigma_{\uparrow\downarrow}=-U\rho_{\uparrow\downarrow}$
+\end_inset
+
+ (Fock).
+ It has no lesser component (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma_first_order
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Second order,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $=2$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The second-order diagrams couple every pair of sites 
+\begin_inset Formula $(i,j)$
+\end_inset
+
+.
+ Writing 
+\begin_inset Formula $G_{ij}$
+\end_inset
+
+ for the 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ spin block between sites 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+,
+ and working in the time domain (the variable conjugate to 
+\begin_inset Formula $\omega$
+\end_inset
+
+ on the grid):
+ 
+\begin_inset Formula 
+\begin{align}
+\Sigma_{ij}^{(2)r}(t) & =\hbar^{2}U_{i}U_{j}\Bigl\{\Gr_{ij}(t)\,\adj\!\bigl[\Gl_{ji}(-t)\,\Gg_{ij}(t)\bigr]+\Gl_{ij}(t)\,\adj\!\bigl[\Gl_{ji}(-t)\,\Gr_{ij}(t)+\Ga_{ji}(-t)\,\Gl_{ij}(t)\bigr]\Bigr\},\\
+\Sigma_{ij}^{(2)<}(t) & =\hbar^{2}U_{i}U_{j}\;\Gl_{ij}(t)\,\adj\!\bigl[\Gg_{ji}(-t)\,\Gl_{ij}(t)\bigr],
+\end{align}
+
+\end_inset
+
+with the 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ adjugate 
+\begin_inset Formula $\adj M=(\Tr M)\,\mathbb{1}-M$
+\end_inset
+
+,
+ i.e.
+\begin_inset space \space{}
+\end_inset
+
+direct minus exchange (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+adj2
+\end_layout
+
+\end_inset
+
+).
+ Each product of three functions is a double sum over the grid in energy,
+ 
+\begin_inset Formula $\sum_{k_{1},k_{2}}A(\omega_{k_{1}})B(\omega_{k_{2}})C(\omega-\omega_{k_{1}}+\omega_{k_{2}})$
+\end_inset
+
+,
+ weighted by 
+\begin_inset Formula $(\delta/2\pi)^{2}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Paragraph
+FFT evaluation.
+\end_layout
+
+\begin_layout Standard
+QUICHOTTE evaluates these sums for all energies at once by fast Fourier transforms (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma2_compute
+\end_layout
+
+\end_inset
+
+,
+ FFTW).
+ Each element of 
+\begin_inset Formula $\Gr$
+\end_inset
+
+ and 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ is zero-padded to length 
+\begin_inset Formula $N_{f}\ge2N_{\omega}-1$
+\end_inset
+
+ (the smallest such length with prime factors 
+\begin_inset Formula $2,3,5,7$
+\end_inset
+
+),
+ transformed,
+ multiplied as above,
+ and transformed back.
+ The zero padding makes the result 
+\emph on
+identical
+\emph default
+ to the direct discrete sums,
+ so it is not an approximation.
+ Only 
+\begin_inset Formula $\Gr$
+\end_inset
+
+ and 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ are transformed;
+ 
+\begin_inset Formula $\Ga_{ij}(t)=[\Gr_{ji}(-t)]^{\dagger}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Gg=\Gl+\Gr-\Ga$
+\end_inset
+
+ follow exactly.
+ The cost per SCF step is 
+\begin_inset Formula $\mathcal{O}(N_{\text{sites}}^{2}\,N_{f}\log N_{f})$
+\end_inset
+
+ instead of 
+\begin_inset Formula $\mathcal{O}(N_{\text{sites}}^{2}N_{\omega}^{2})$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Total self-energy
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\Sigma^{r}=\Sigma^{(1)}+\Sigma^{(2)r},\qquad\Sigma^{<}=\Sigma^{(2)<},
+\end{equation}
+
+\end_inset
+
+including only the terms up to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma_retarded
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma_lesser
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Section
+Self-consistency
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:scf"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+The fixed-point problem
+\end_layout
+
+\begin_layout Standard
+At each voltage the code solves 
+\begin_inset Formula $G=\mathcal{F}[G]$
+\end_inset
+
+,
+ where 
+\begin_inset Formula $\mathcal{F}$
+\end_inset
+
+ builds 
+\begin_inset Formula $\Sigma[G]$
+\end_inset
+
+ and then applies Eqs.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:dyson"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+–
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:greater"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+.
+ 
+\begin_inset Formula $\Gr$
+\end_inset
+
+ and 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ on the whole grid are packed into one real vector 
+\begin_inset Formula $x$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+pack_gf
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/linear_algebra.f90
+\end_layout
+
+\end_inset
+
+).
+ Per energy the vector holds 
+\begin_inset Formula 
+\[
+\bigl[\operatorname{Re}\Gr_{ab}\;(N_{\text{orb}}^{2})\;\big|\;\operatorname{Im}\Gr_{ab}\;(N_{\text{orb}}^{2})\;\big|\;\operatorname{Re}\Gl_{a<b}\;\big|\;\operatorname{Im}\Gl_{a\le b}\bigr].
+\]
+
+\end_inset
+
+Only the independent half of 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ is stored,
+ because 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ is anti-Hermitian,
+ 
+\begin_inset Formula $\Gl_{ba}=-\bigl(\Gl_{ab}\bigr)^{*}$
+\end_inset
+
+,
+ so its diagonal is purely imaginary.
+ The residual is 
+\begin_inset Formula $F(x)=x_{\text{out}}(x)-x$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+scf_residual
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Modified Broyden mixing
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $F(x)=0$
+\end_inset
+
+ is solved by Johnson's modified Broyden method (D.
+\begin_inset space ~
+\end_inset
+
+D.
+\begin_inset space ~
+\end_inset
+
+Johnson,
+ Phys.
+\begin_inset space \space{}
+\end_inset
+
+Rev.
+\begin_inset space \space{}
+\end_inset
+
+B 
+\series bold
+38
+\series default
+,
+ 12807 (1988);
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/broyden_mixing.f90
+\end_layout
+
+\end_inset
+
+).
+ With 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+alpha_mix
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula 
+\begin{align}
+\Delta F_{k} & =\frac{F_{k}-F_{k-1}}{\|F_{k}-F_{k-1}\|},\qquad u_{k}=\alpha\,\Delta F_{k}+\frac{x_{k}-x_{k-1}}{\|F_{k}-F_{k-1}\|},\\
+\gamma & =\bigl(w_{0}^{2}\,\mathbb{1}+\Delta F^{T}\Delta F\bigr)^{-1}\Delta F^{T}F_{n},\qquad w_{0}=0.01,\\
+x_{n+1} & =x_{n}+\alpha F_{n}-\sum_{k}\gamma_{k}\,u_{k}.
+\end{align}
+
+\end_inset
+
+The last 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+nhist
+\end_layout
+
+\end_inset
+
+ pairs 
+\begin_inset Formula $(\Delta F_{k},u_{k})$
+\end_inset
+
+ are kept in a ring buffer (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+nhist
+\end_layout
+
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $=0$
+\end_inset
+
+ gives plain linear mixing).
+ No Jacobian is stored,
+ so each step costs one evaluation of 
+\begin_inset Formula $F$
+\end_inset
+
+ plus 
+\begin_inset Formula $\mathcal{O}(n\cdot\code{nhist})$
+\end_inset
+
+ BLAS work,
+ with 
+\begin_inset Formula $n$
+\end_inset
+
+ the vector length.
+\end_layout
+
+\begin_layout Subsection
+Convergence
+\end_layout
+
+\begin_layout Standard
+A voltage is converged when 
+\begin_inset Formula $\max_{m}|F_{m}|<\code{tolf}$
+\end_inset
+
+.
+ This is tested 
+\emph on
+before
+\emph default
+ mixing,
+ so the stored solution is an input whose own output differs from it by less than 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tolf
+\end_layout
+
+\end_inset
+
+ in every component.
+ At most 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+maxscf
+\end_layout
+
+\end_inset
+
+ steps are taken.
+ The history of every voltage is in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+scf_V_<V>.dat
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Sanity checks
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:sanity"
+
+\end_inset
+
+ After every step (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/scf_checks.f90
+\end_layout
+
+\end_inset
+
+),
+ for every spin-orbital 
+\begin_inset Formula $a$
+\end_inset
+
+:
+ 
+\begin_inset Formula 
+\[
+n_{a}=-i\hbar\tfrac{\delta}{2\pi}{\textstyle \sum_{k}\Gl_{aa}(\omega_{k}),\qquad W_{a}=-\hbar\tfrac{\delta}{\pi}{\textstyle \sum_{k}\operatorname{Im}\Gr_{aa}(\omega_{k}).}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Runaway
+\series default
+ (NaN,
+ or 
+\begin_inset Formula $n_{a}\notin[-1,2]$
+\end_inset
+
+):
+ the SCF for this voltage is abandoned.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Unphysical
+\series default
+ (
+\begin_inset Formula $n_{a}\notin[-0.05,1.05]$
+\end_inset
+
+ or 
+\begin_inset Formula $W_{a}<0.5$
+\end_inset
+
+):
+ a converged solution of this kind is 
+\emph on
+not
+\emph default
+ accepted.
+ 
+\begin_inset Formula $W_{a}<1$
+\end_inset
+
+ usually means the grid margins 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dw
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+up
+\end_layout
+
+\end_inset
+
+ are too small.
+ 
+\end_layout
+
+\begin_layout Subsection
+Voltage sweep and starting guess
+\end_layout
+
+\begin_layout Standard
+Voltages run from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+V
+\end_layout
+
+\end_inset
+
+ to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Vf
+\end_layout
+
+\end_inset
+
+ in steps of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delv
+\end_layout
+
+\end_inset
+
+.
+ The first voltage starts from 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+.
+ With 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+continuation = T
+\end_layout
+
+\end_inset
+
+ (the default),
+ each later voltage starts from the converged 
+\begin_inset Formula $G$
+\end_inset
+
+ of the previous one,
+ which usually saves many iterations;
+ with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+continuation = F
+\end_layout
+
+\end_inset
+
+ every voltage starts from 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+.
+ A voltage that fails (not converged,
+ runaway or unphysical) is 
+\emph on
+flagged
+\emph default
+ (last column 
+\begin_inset Formula $=0$
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Volt_Current
+\end_layout
+
+\end_inset
+
+),
+ the sweep carries on,
+ and the next voltage starts from 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+ again.
+ If any voltage failed,
+ the program exits with code
+\begin_inset space ~
+\end_inset
+
+3.
+\end_layout
+
+\begin_layout Standard
+Comparing a sweep with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+continuation = T
+\end_layout
+
+\end_inset
+
+ against one with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+continuation = F
+\end_layout
+
+\end_inset
+
+ (every voltage from 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+) is a quick check for hysteresis.
+\end_layout
+
+\begin_layout Section
+Input reference:
+ 
+\family typewriter
+input.dat
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:input"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+One 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+key = value
+\end_layout
+
+\end_inset
+
+ per line,
+ in any order;
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+#
+\end_layout
+
+\end_inset
+
+ starts a comment.
+ Keys are case-sensitive.
+ The reader (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/input_parser.f90
+\end_layout
+
+\end_inset
+
+):
+ 
+\end_layout
+
+\begin_layout Itemize
+stops with a list of 
+\emph on
+all
+\emph default
+ missing required keys and duplicated keys;
+ 
+\end_layout
+
+\begin_layout Itemize
+warns about keys it does not know (usually a typo);
+ 
+\end_layout
+
+\begin_layout Itemize
+reports the line number of a value it cannot read.
+ 
+\end_layout
+
+\begin_layout Standard
+If there is no 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+input.dat
+\end_layout
+
+\end_inset
+
+ it reads 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+inputSOC.dat
+\end_layout
+
+\end_inset
+
+ (the old name).
+ Old key names (third column) are still accepted.
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+examples/helix_4x2_order2/input.dat
+\end_layout
+
+\end_inset
+
+ documents every key.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="26" columns="4">
+<features booktabs="true" islongtable="true" longtabularalignment="center">
+<column alignment="none" valignment="top" special=">{\ttfamily}l">
+<column alignment="left" valignment="top">
+<column alignment="left" valignment="top">
+<column alignment="none" valignment="top" width="7.2cm">
+<row endhead="true">
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+key 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+default 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+old name 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+meaning 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+V,
+ Vf,
+ delv 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+first voltage,
+ last voltage,
+ step [V] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+T 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+temperature of both leads [K] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mu 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+chemical potential at 
+\begin_inset Formula $V=0$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+N_ions 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+sites per turn (
+\begin_inset Formula $\ge2$
+\end_inset
+
+) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+N_turns 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+number of turns 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hel_length 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $L$
+\end_inset
+
+,
+ see the helix geometry above 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hel_radius 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $R$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hand 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $+1$
+\end_inset
+
+ right-handed,
+ 
+\begin_inset Formula $-1$
+\end_inset
+
+ left-handed 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+E_CC 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+on-site energy 
+\begin_inset Formula $\varepsilon$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+t_hop 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+nearest-neighbour hopping 
+\begin_inset Formula $t$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+lamb 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SOC strength 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+U_int 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Hubbard
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+uniform 
+\begin_inset Formula $U$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hubbard_file 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+none 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+file with one 
+\begin_inset Formula $U$
+\end_inset
+
+ per site (overrides 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+U_int
+\end_layout
+
+\end_inset
+
+) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0 non-interacting,
+ 1 Hartree–Fock,
+ 2 second order 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+GammaL_up 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\Gamma_{L\uparrow}$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+GammaL_down 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\Gamma_{L\downarrow}$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+GammaR 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaR_both
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\Gamma_{R}$
+\end_inset
+
+,
+ both spins [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dw,
+ up 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+grid margins below/above the spectrum of 
+\begin_inset Formula $H$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+delta 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+required 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+grid spacing 
+\begin_inset Formula $\delta$
+\end_inset
+
+ [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+alpha_mix 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0.5 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+pulay
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Broyden linear-mixing weight 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+nhist 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+16 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Broyden history length (0 = linear mixing) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+maxscf 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+300 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+maximum SCF steps per voltage 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+tolf 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $10^{-6}$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+convergence threshold on 
+\begin_inset Formula $\max|F|$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+continuation 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+T 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+start each voltage from the previous one 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+restart 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+accepted for old files,
+ not used 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Choosing the numerical parameters.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delta
+\end_layout
+
+\end_inset
+
+ must resolve the narrowest feature of the spectral function,
+ whose width is set by 
+\begin_inset Formula $\Gamma$
+\end_inset
+
+ and 
+\begin_inset Formula $U$
+\end_inset
+
+.
+ Halve it and compare.
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dw
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+up
+\end_layout
+
+\end_inset
+
+ must contain the broadened spectrum;
+ check that 
+\begin_inset Formula $W_{a}\approx1$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Itemize
+Runtime and memory grow as 
+\begin_inset Formula $N_{\omega}\propto(\text{bandwidth}+\code{dw}+\code{up})/\delta$
+\end_inset
+
+.
+ The Broyden history needs 
+\begin_inset Formula $2\,\code{nhist}\cdot n$
+\end_inset
+
+ doubles,
+ with 
+\begin_inset Formula $n\approx3N_{\text{orb}}^{2}N_{\omega}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Itemize
+If a voltage does not converge,
+ lower 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+alpha_mix
+\end_layout
+
+\end_inset
+
+ (e.g.
+\begin_inset space \space{}
+\end_inset
+
+0.2) or raise 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+maxscf
+\end_layout
+
+\end_inset
+
+;
+ large 
+\begin_inset Formula $U/|t|$
+\end_inset
+
+ needs smaller 
+\begin_inset Formula $\alpha$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Section
+Output reference
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:output"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="7" columns="2">
+<features booktabs="true" islongtable="true" longtabularalignment="center">
+<column alignment="none" valignment="top" special=">{\ttfamily}p{5.0cm}">
+<column alignment="none" valignment="top" width="10.2cm">
+<row endhead="true">
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+file 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+content 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Volt_Current_<order>.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+one line per voltage:
+ 
+\begin_inset Formula $V$
+\end_inset
+
+,
+ 
+\begin_inset Formula $J_{\uparrow}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $J_{\downarrow}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $J$
+\end_inset
+
+,
+ converged (1/0) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+populations.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+one line per site per voltage:
+ 
+\begin_inset Formula $V$
+\end_inset
+
+,
+ site,
+ 
+\begin_inset Formula $\langle S_{x}\rangle$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\langle S_{y}\rangle$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\langle S_{z}\rangle$
+\end_inset
+
+,
+ 
+\begin_inset Formula $n_{\downarrow}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $n_{\uparrow}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $n$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+spectral_function.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $V$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\omega$
+\end_inset
+
+,
+ 
+\begin_inset Formula $A_{aa}(\omega)=-2\operatorname{Im}\Gr_{aa}$
+\end_inset
+
+ for every spin-orbital;
+ one block per voltage (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+index k
+\end_layout
+
+\end_inset
+
+ in gnuplot) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+scf_V_<V>.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SCF history at that voltage:
+ step,
+ 
+\begin_inset Formula $\max|F|$
+\end_inset
+
+,
+ rms
+\begin_inset Formula $|F|$
+\end_inset
+
+,
+ history length used 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+info_Hamiltonian.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $H$
+\end_inset
+
+,
+ a Hermiticity check,
+ eigenvalues,
+ eigenvectors 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+runtime_datasheet.dat 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+code version (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+git describe
+\end_layout
+
+\end_inset
+
+),
+ voltages processed,
+ wall time 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Exit codes.
+\end_layout
+
+\begin_layout Standard
+0:
+ every voltage converged.
+ 1:
+ bad input (the message says why).
+ 3:
+ finished,
+ but at least one voltage failed (column
+\begin_inset space ~
+\end_inset
+
+5 
+\begin_inset Formula $=0$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Paragraph
+Version stamp.
+\end_layout
+
+\begin_layout Standard
+The Makefile writes the output of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+git describe –always –dirty –tags
+\end_layout
+
+\end_inset
+
+ into the binary.
+ It is printed at start-up and in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+runtime_datasheet.dat
+\end_layout
+
+\end_inset
+
+,
+ so every result records the code that produced it.
+ Tag the versions you use for papers (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+git tag paper1-v1
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Section
+Workflow
+\end_layout
+
+\begin_layout Subsection
+Runs on a cluster
+\end_layout
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hpc/<cluster>/job.*
+\end_layout
+
+\end_inset
+
+ run QUICHOTTE in the directory they are submitted from.
+ Set 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+EXE
+\end_layout
+
+\end_inset
+
+ at the top of the script once:
+ 
+\end_layout
+
+\begin_layout Verbatim
+cd /scratch/users/$USER/R2G2D
+\end_layout
+
+\begin_layout Verbatim
+cp ~/QUICHOTTE/examples/helix_4x2_order2/input.dat .
+\end_layout
+
+\begin_layout Verbatim
+sbatch ~/QUICHOTTE/hpc/create/job.slurm          # CREATE (Slurm)
+\end_layout
+
+\begin_layout Verbatim
+qsub   ~/QUICHOTTE/hpc/young/job.sge             # Young (SGE)
+\end_layout
+
+\begin_layout Verbatim
+sbatch $WORK/QUICHOTTE/hpc/archer2/job.slurm  # ARCHER2 (under /work)
+\end_layout
+
+\begin_layout Standard
+The scripts set 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+OMP_NUM_THREADS
+\end_layout
+
+\end_inset
+
+ to the allocated cores,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+OPENBLAS_NUM_THREADS=1
+\end_layout
+
+\end_inset
+
+ (the LAPACK calls already sit inside OpenMP loops) and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+OMP_STACKSIZE=512M
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Parallelism
+\end_layout
+
+\begin_layout Standard
+OpenMP parallelises the loop over energies (Dyson/Keldysh) and the FFT self-energy over site pairs.
+ One run uses one node;
+ scale 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+OMP_NUM_THREADS
+\end_layout
+
+\end_inset
+
+ up to the number of cores.
+\end_layout
+
+\begin_layout Subsection
+Tools
+\end_layout
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make tools
+\end_layout
+
+\end_inset
+
+ builds:
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+bin/helix_xyz.x [input.dat]
+\end_layout
+
+\end_inset
+
+:
+ writes 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helix.xyz
+\end_layout
+
+\end_inset
+
+ with the site positions of the run (for visualisation,
+ or as a starting point for 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_xyz
+\end_layout
+
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+bin/dIdV.x [file] [column]
+\end_layout
+
+\end_inset
+
+:
+ differential conductance 
+\begin_inset Formula $dJ/dV$
+\end_inset
+
+ by central differences,
+ written to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dI_dV.dat
+\end_layout
+
+\end_inset
+
+ (column 4 = 
+\begin_inset Formula $J$
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Section
+Using your own Hamiltonian
+\end_layout
+
+\begin_layout Standard
+
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:customH"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The helix of Section
+\begin_inset space ~
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:model"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ is only one model. Nothing else in QUICHOTTE depends on it: the Green's functions, self-energies, SCF loop and observables see nothing but the matrix 
+\begin_inset Formula $H$
+\end_inset
+
+. Any single-particle Hamiltonian can therefore be used, as long as it follows the rules below.
+\end_layout
+
+\begin_layout Subsection
+What the matrix must look like
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Storage.
+\series default
+ 
+\begin_inset Formula $H$
+\end_inset
+
+ is the module variable 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+H
+\end_layout
+
+\end_inset
+
+ of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+, declared 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+complex(dp), allocatable :: H(:,:)
+\end_layout
+
+\end_inset
+
+. The main program allocates it as 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+H(Norb, Norb)
+\end_layout
+
+\end_inset
+
+ before your routine is called; your routine only fills it (do not reallocate it).
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Basis order (essential).
+\series default
+ Spin-orbitals are interleaved by site: 
+\begin_inset Formula \[
+    2i-1 = (i,\uparrow),\qquad 2i = (i,\downarrow),\qquad i = 1,\dots,N_\text{sites},
+  \]
+\end_inset
+
+so 
+\begin_inset Formula $N_\text{orb} = 2N_\text{sites}$
+\end_inset
+
+ is always even. The rest of the code relies on this order. The Hubbard 
+\begin_inset Formula $U$
+\end_inset
+
+ acts on the 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ spin block of each site, and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+U_site
+\end_layout
+
+\end_inset
+
+ is stored on the spin-up index. The first- and second-order self-energies loop over sites in steps of two. The spin texture, the populations and the spin-resolved current read odd indices as spin up and even indices as spin down. The lead couplings 
+\begin_inset Formula $\Gamma_{L,R}$
+\end_inset
+
+ use the same order. A Hamiltonian written as two spin blocks, 
+\begin_inset Formula $\begin{pmatrix} H_{\uparrow\uparrow} & H_{\uparrow\downarrow}\\ H_{\downarrow\uparrow} & H_{\downarrow\downarrow}\end{pmatrix}$
+\end_inset
+
+, must be reordered: element 
+\begin_inset Formula $(H_{\sigma\sigma'})_{ij}$
+\end_inset
+
+ goes to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+H(2i-1+s, 2j-1+s')
+\end_layout
+
+\end_inset
+
+ with 
+\begin_inset Formula $s,s' = 0$
+\end_inset
+
+ for 
+\begin_inset Formula $\uparrow$
+\end_inset
+
+ and 
+\begin_inset Formula $1$
+\end_inset
+
+ for 
+\begin_inset Formula $\downarrow$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Hermitian.
+\series default
+ 
+\begin_inset Formula $H = H^\dagger$
+\end_inset
+
+. The easiest way is to fill only the 
+\emph on
+upper
+\emph default
+ triangle (column 
+\begin_inset Formula $\ge$
+\end_inset
+
+ row, diagonal included) and finish with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+call make_hermitian()
+\end_layout
+
+\end_inset
+
+, as the helix routine does. This overwrites the lower triangle with the conjugate of the upper one (and makes the diagonal real), so anything you wrote below the diagonal is lost. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+info_Hamiltonian.dat
+\end_layout
+
+\end_inset
+
+ lists 
+\begin_inset Formula $H_{ij} - H_{ji}^*$
+\end_inset
+
+ for every pair; all must be zero.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Units and energy zero.
+\series default
+ Energies in eV, on the same scale as 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+mu
+\end_layout
+
+\end_inset
+
+: at 
+\begin_inset Formula $V=0$
+\end_inset
+
+ the levels below 
+\begin_inset Formula $\mu$
+\end_inset
+
+ are filled.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Static and non-interacting.
+\series default
+ 
+\begin_inset Formula $H$
+\end_inset
+
+ must not depend on energy or on the SCF iteration. The interaction enters only through the Hubbard 
+\begin_inset Formula $U$
+\end_inset
+
+ of each site (Section
+\begin_inset space ~
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:sigma"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+), so do 
+\emph on
+not
+\emph default
+ put Hubbard or Hartree terms into 
+\begin_inset Formula $H$
+\end_inset
+
+: they would be counted twice. Fixed external terms (a gate potential, a magnetic field 
+\begin_inset Formula $\mathbf B\cdot\boldsymbol\sigma$
+\end_inset
+
+, any form of spin–orbit coupling) are fine.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+One orbital per site.
+\series default
+ Each site carries one orbital with two spin states, and 
+\begin_inset Formula $U$
+\end_inset
+
+ acts only between the two spins of that orbital. A molecule with several orbitals per atom can still be described by treating every orbital as a 
+\begin_inset Quotes eld
+\end_inset
+
+site
+\begin_inset Quotes erd
+\end_inset
+
+ with its own 
+\begin_inset Formula $U$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+). The interaction between different orbitals is then neglected.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Contacts.
+\series default
+ The left lead couples to site 
+\begin_inset Formula $1$
+\end_inset
+
+ (indices 1, 2), the right lead to site 
+\begin_inset Formula $N_\text{sites}$
+\end_inset
+
+ (indices 
+\begin_inset Formula $N_\text{orb}-1$
+\end_inset
+
+, 
+\begin_inset Formula $N_\text{orb}$
+\end_inset
+
+). Number your sites so that the contacted ones come first and last, or change the two lines that set 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaR
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/quichotte.f90
+\end_layout
+
+\end_inset
+
+. 
+\end_layout
+
+\begin_layout Standard
+Anything else is allowed. Hoppings may connect any pair of sites and have any range, on-site energies may differ, spin-flip terms may appear anywhere, and the matrix may be dense. The second-order self-energy is computed for every pair of sites, so it does not assume any particular connectivity.
+\end_layout
+
+\begin_layout Subsection
+Number of sites
+\end_layout
+
+\begin_layout Standard
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+read_input
+\end_layout
+
+\end_inset
+
+ sets 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Norb = 2*N_ions*N_turns
+\end_layout
+
+\end_inset
+
+. For a system that is not a helix, either choose 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_ions
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_turns
+\end_layout
+
+\end_inset
+
+ so that their product is the number of sites, or add an input key (e.g. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_sites
+\end_layout
+
+\end_inset
+
+) and set 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Norb = 2*N_sites
+\end_layout
+
+\end_inset
+
+ there. The energy grid needs no change: it is built from the eigenvalues of whatever 
+\begin_inset Formula $H$
+\end_inset
+
+ you supply.
+\end_layout
+
+\begin_layout Subsection
+Step by step
+\end_layout
+
+\begin_layout Enumerate
+Write the routine inside 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+module Hamiltonian
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+. A template (a plain spin-degenerate chain; replace the body with your model): 
+\end_layout
+
+\begin_layout Verbatim
+   subroutine build_my_hamiltonian()
+\end_layout
+
+\begin_layout Verbatim
+      !...my model: one line describing it
+\end_layout
+
+\begin_layout Verbatim
+      integer :: i, ii, Nsites
+\end_layout
+
+\begin_layout Verbatim
+
+\end_layout
+
+\begin_layout Verbatim
+      H = (0.d0, 0.d0)
+\end_layout
+
+\begin_layout Verbatim
+      Nsites = Norb/2
+\end_layout
+
+\begin_layout Verbatim
+      do i = 1, Nsites
+\end_layout
+
+\begin_layout Verbatim
+         ii = 2*i                     !...ii-1 = (i,up), ii = (i,down)
+\end_layout
+
+\begin_layout Verbatim
+         H(ii - 1, ii - 1) = E_CC     !...on-site energy, spin up
+\end_layout
+
+\begin_layout Verbatim
+         H(ii, ii)         = E_CC     !...on-site energy, spin down
+\end_layout
+
+\begin_layout Verbatim
+         if (i < Nsites) then         !...hopping i -> i+1, spin conserving
+\end_layout
+
+\begin_layout Verbatim
+            H(ii - 1, ii + 1) = t_hop !...up   -> up
+\end_layout
+
+\begin_layout Verbatim
+            H(ii, ii + 2)     = t_hop !...down -> down
+\end_layout
+
+\begin_layout Verbatim
+         end if
+\end_layout
+
+\begin_layout Verbatim
+      end do
+\end_layout
+
+\begin_layout Verbatim
+      call make_hermitian()           !...upper triangle -> whole matrix
+\end_layout
+
+\begin_layout Verbatim
+   end subroutine build_my_hamiltonian
+\end_layout
+
+\begin_layout Enumerate
+New parameters of your model: declare them in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/parameters.f90
+\end_layout
+
+\end_inset
+
+ and read them in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+read_input
+\end_layout
+
+\end_inset
+
+ with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+call input_get('my_key', my_var)
+\end_layout
+
+\end_inset
+
+. Add 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+default=...
+\end_layout
+
+\end_inset
+
+ to make a key optional. Helix keys your model does not use (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_length
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_radius
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hand
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lamb
+\end_layout
+
+\end_inset
+
+) can be made optional the same way. 
+\end_layout
+
+\begin_layout Enumerate
+In 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/quichotte.f90
+\end_layout
+
+\end_inset
+
+, replace 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+call build_helix_hamiltonian()
+\end_layout
+
+\end_inset
+
+ by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+call build_my_hamiltonian()
+\end_layout
+
+\end_inset
+
+. 
+\end_layout
+
+\begin_layout Enumerate
+Build (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make
+\end_layout
+
+\end_inset
+
+) and check one run. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+info_Hamiltonian.dat
+\end_layout
+
+\end_inset
+
+ should show your 
+\begin_inset Formula $H$
+\end_inset
+
+, all-zero Hermiticity differences and the expected eigenvalues. With 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order = 0
+\end_layout
+
+\end_inset
+
+, the current at 
+\begin_inset Formula $V=0$
+\end_inset
+
+ should be zero. 
+\end_layout
+
+\begin_layout Enumerate
+Run 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make test
+\end_layout
+
+\end_inset
+
+. The tests use the helix and must still pass. Then add a small test case for your model (Section
+\begin_inset space ~
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:testing"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+) so that later changes cannot break it unnoticed. 
+\end_layout
+
+\begin_layout Subsection
+Same model, different shape: positions from a file
+\end_layout
+
+\begin_layout Standard
+If your molecule has the same kind of terms as the helix (nearest-neighbour hopping, and SOC between sites 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $i+2$
+\end_inset
+
+ built from the bond directions) but a different shape, no new code is needed. Write the site positions, in chain order, to an 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+.xyz
+\end_layout
+
+\end_inset
+
+ file (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tools/helix_xyz.f90
+\end_layout
+
+\end_inset
+
+ writes one to start from), and call 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_xyz('my_molecule.xyz')
+\end_layout
+
+\end_inset
+
+ instead of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian()
+\end_layout
+
+\end_inset
+
+. The file must contain 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Norb/2
+\end_layout
+
+\end_inset
+
+ atoms. 
+\end_layout
+
+\begin_layout Section
+Code structure
+\end_layout
+
+\begin_layout Standard
+
+\size small
+\begin_inset Tabular
+<lyxtabular version="3" rows="14" columns="3">
+<features booktabs="true" islongtable="true" longtabularalignment="center">
+<column alignment="none" valignment="top" special=">{\ttfamily}p{4.8cm}">
+<column alignment="none" valignment="top" special=">{\ttfamily}p{3.3cm}">
+<column alignment="none" valignment="top" width="6.6cm">
+<row endhead="true">
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+file 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+module 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+content 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/quichotte.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+(program) 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+set-up,
+ energy grid,
+ voltage loop,
+ output files 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/parameters.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+Parameters 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+run parameters,
+ sizes,
+ Pauli matrices,
+ unit numbers 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/hamiltonian.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+Hamiltonian 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+helix geometry,
+ SOC,
+ 
+\begin_inset Formula $H$
+\end_inset
+
+ (analytic or from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+.xyz
+\end_layout
+
+\end_inset
+
+) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/green_functions.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+GreenFunctions 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+storage of 
+\begin_inset Formula $G_{\text{in}}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $G_{\text{out}}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Gamma$
+\end_inset
+
+,
+ grid;
+ 
+\begin_inset Formula $G_{0}$
+\end_inset
+
+;
+ 
+\begin_inset Formula $\Gl(t{=}0)$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/self_energies.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+SelfEnergies 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+\begin_inset Formula $\Sigma^{(1)}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Sigma^{(2)}$
+\end_inset
+
+ by FFT 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/scf.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+SCF 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+SCF driver,
+ residual,
+ Dyson/Keldysh at one energy 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/observables.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+Observables 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+current,
+ spin texture,
+ spectral function 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+src/input_output.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+InputOutput 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+reads 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+input.dat
+\end_layout
+
+\end_inset
+
+,
+ per-site 
+\begin_inset Formula $U$
+\end_inset
+
+,
+ Hamiltonian printout 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+common/constants.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+Constants 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dp
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $\hbar$
+\end_inset
+
+,
+ 
+\begin_inset Formula $k_{B}$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\pi$
+\end_inset
+
+,
+ 
+\begin_inset Formula $i$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+common/linear_algebra.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+LinearAlgebra 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+LAPACK wrappers,
+ packing of 
+\begin_inset Formula $G$
+\end_inset
+
+ for Broyden 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+common/input_parser.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+InputParser 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+key = value
+\end_layout
+
+\end_inset
+
+ reader with checks 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+common/broyden_mixing.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+BroydenMixing 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+modified Broyden solver 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+common/scf_checks.f90 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+ScfChecks 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size small
+occupation / spectral-weight checks 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Call sequence of one run.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+raggedright
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+read_input
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hermitian_eigensystem
+\end_layout
+
+\end_inset
+
+ (grid) 
+\begin_inset Formula $\to$
+\end_inset
+
+ for each 
+\begin_inset Formula $V$
+\end_inset
+
+:
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+solve_scf
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+broyden_solve
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ repeatedly 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+scf_residual
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ [
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+equal_time_lesser
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma2_compute
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+interacting_gf
+\end_layout
+
+\end_inset
+
+ for every 
+\begin_inset Formula $\omega$
+\end_inset
+
+] 
+\begin_inset Formula $\to$
+\end_inset
+
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Current
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+spin_texture
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+write_spectral
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Naming.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $G_{\text{in}}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+G_in
+\end_layout
+
+\end_inset
+
+ is the input of the current SCF step and 
+\begin_inset Formula $G_{\text{out}}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+G_out
+\end_layout
+
+\end_inset
+
+ its output;
+ components 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+%r
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+%a
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+%L
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+%G
+\end_layout
+
+\end_inset
+
+,
+ each 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+(Norb,
+ Norb,
+ n_omega)
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Paragraph
+Shared code.
+\end_layout
+
+\begin_layout Standard
+The files in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+common/
+\end_layout
+
+\end_inset
+
+ are identical in QUICHOTTE and SANCHO;
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make check-common
+\end_layout
+
+\end_inset
+
+ (also run by CI) fails if they differ.
+ Change them in one place,
+ then copy them to the other.
+\end_layout
+
+\begin_layout Subsection
+Common changes
+\end_layout
+
+\begin_layout Description
+\begin_inset Argument listpreamble:1
+status collapsed
+
+\begin_layout Plain Layout
+
+[style=nextline]
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+raggedright
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+A new input key
+\end_layout
+
+\end_inset
+
+ Add the variable (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+parameters.f90
+\end_layout
+
+\end_inset
+
+,
+ or the module that uses it),
+ add one 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+call input_get('key',
+ var[,
+ default=…])
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+read_input
+\end_layout
+
+\end_inset
+
+,
+ add a check in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+check_input
+\end_layout
+
+\end_inset
+
+ if needed,
+ and add it to the example input and to Section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:input"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Description
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+A different geometry or model
+\end_layout
+
+\end_inset
+
+ Write the positions to an 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+.xyz
+\end_layout
+
+\end_inset
+
+ file and call 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_xyz
+\end_layout
+
+\end_inset
+
+ instead of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+quichotte.f90
+\end_layout
+
+\end_inset
+
+.
+ 
+ For a different model altogether, see Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Description
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+A sweep over a Hamiltonian parameter
+\end_layout
+
+\end_inset
+
+ Set it inside the voltage loop and call 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian()
+\end_layout
+
+\end_inset
+
+ again (marked in the source).
+ 
+\end_layout
+
+\begin_layout Description
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+A new self-energy
+\end_layout
+
+\end_inset
+
+ Compute it in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+self_energies.f90
+\end_layout
+
+\end_inset
+
+ for all energies and add it in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma_retarded
+\end_layout
+
+\end_inset
+
+ / 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sigma_lesser
+\end_layout
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Section
+Testing and validation
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:testing"
+
+\end_inset
+
+
+\end_layout
+
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make test
+\end_layout
+
+\end_inset
+
+ builds the Fortran test runner (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tests/run_tests.f90
+\end_layout
+
+\end_inset
+
+) and runs every case listed in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tests/cases.txt
+\end_layout
+
+\end_inset
+
+.
+ Each case is run in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tests/work/<case>/
+\end_layout
+
+\end_inset
+
+,
+ and its output is compared number by number with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tests/cases/<case>/reference/
+\end_layout
+
+\end_inset
+
+:
+ 
+\begin_inset Formula $|x_{\text{new}}-x_{\text{ref}}|\le10^{-6}+10^{-5}|x_{\text{ref}}|$
+\end_inset
+
+ (override with the environment variables 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+TOL_ABS
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+TOL_REL
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="2">
+<features booktabs="true" tabularvalignment="middle">
+<column alignment="none" valignment="top" special=">{\ttfamily}l">
+<column alignment="none" valignment="top" width="9.5cm">
+<row>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+case 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+what it covers 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order0_noninteracting 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" topline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4-site helix,
+ 
+\begin_inset Formula $U=0$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order1_hartree_fock 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+first-order 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order2_second_order 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+FFT second-order 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+,
+ Broyden 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order2_lefthanded_siteU 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $h=-1$
+\end_inset
+
+,
+ site-dependent 
+\begin_inset Formula $U$
+\end_inset
+
+ from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+legacy_inputSOC 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+old file name 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+inputSOC.dat
+\end_layout
+
+\end_inset
+
+ and old key names 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Run 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make test
+\end_layout
+
+\end_inset
+
+ before every commit;
+ CI also runs it on every push.
+ After a 
+\emph on
+deliberate
+\emph default
+ change of the physics,
+ check the new numbers,
+ run 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make update-references
+\end_layout
+
+\end_inset
+
+,
+ and commit the new references together with the change.
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+make debug
+\end_layout
+
+\end_inset
+
+ builds with bounds checking and floating-point trapping,
+ and should pass the same tests.
+\end_layout
+
+\begin_layout Paragraph
+Validation history.
+\end_layout
+
+\begin_layout Standard
+The restructured code reproduces the previous version (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+SCF_stype
+\end_layout
+
+\end_inset
+
+) to better than 
+\begin_inset Formula $3\times10^{-8}$
+\end_inset
+
+ in all currents,
+ populations and 
+\begin_inset Formula $\langle S_{z}\rangle$
+\end_inset
+
+ for orders 0–2 (October 2026).
+ Before the clean-up,
+ according to its commit history,
+ the code agreed with the spinless code and with earlier independent implementations,
+ gave 
+\begin_inset Formula $J=0$
+\end_inset
+
+ at 
+\begin_inset Formula $V=0$
+\end_inset
+
+,
+ and satisfied 
+\begin_inset Formula $\Gg=\Gl+\Gr-\Ga$
+\end_inset
+
+ with interactions.
+\end_layout
+
+\begin_layout Section
+Known limitations
+\end_layout
+
+\begin_layout Itemize
+Perturbation theory in 
+\begin_inset Formula $U$
+\end_inset
+
+ up to second order;
+ large 
+\begin_inset Formula $U/|t|$
+\end_inset
+
+ may not converge or may converge to the unphysical solutions that the sanity checks reject.
+ 
+\end_layout
+
+\begin_layout Itemize
+Wide-band leads coupled to the two end sites only;
+ the bias is applied to the left lead.
+ 
+\end_layout
+
+\begin_layout Itemize
+The energy grid is uniform;
+ resolving sharp resonances needs a small 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delta
+\end_layout
+
+\end_inset
+
+ everywhere.
+ 
+\end_layout
+
+\begin_layout Itemize
+Voltages are swept upwards only (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delv
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $>0$
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_xyz
+\end_layout
+
+\end_inset
+
+ keeps the chain connectivity (bonds 
+\begin_inset Formula $i$
+\end_inset
+
+–
+\begin_inset Formula $i{+}1$
+\end_inset
+
+,
+ SOC 
+\begin_inset Formula $i$
+\end_inset
+
+–
+\begin_inset Formula $i{+}2$
+\end_inset
+
+) of the helix.
+ 
+\end_layout
+
+\end_body
+\end_document

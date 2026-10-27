@@ -1,0 +1,18 @@
+# =============================================================================
+# manifest.txt -- the list of runs.
+#
+# First non-comment line = column names. Each column is an input.dat key
+# (anything in defaults.dat), plus one extra:
+#     Ut   U/|t| ratio: sets U_int = Ut * |t_hop|  (don't also give U_int)
+#
+# Each following line is a run. Comma-separated values expand to every
+# combination, so the line
+#     4,8   1.0,2.0   2
+# is four runs: (4,1.0,2) (4,2.0,2) (8,1.0,2) (8,2.0,2).
+#
+# Keys not listed come from defaults.dat. Write numbers the same way every
+# time (e.g. always 1.0, never 1 and 1.0) -- they become directory names.
+# Runs are packed RUNS_PER_NODE to a node, in manifest order.
+# =============================================================================
+Nsites          Ut                        order
+4,8,12,16,20    0.5,1.0,2.0,4.0,8.0       2,3

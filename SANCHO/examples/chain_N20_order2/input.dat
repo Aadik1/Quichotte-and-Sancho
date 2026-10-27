@@ -1,0 +1,36 @@
+# =============================================================================
+# input.dat  --  SANCHO (bin/sancho.x)
+# Format: key = value, one per line. '#' starts a comment. Order does not matter.
+# Energies in eV, voltages in V, temperature in K (hbar = e = 1).
+# =============================================================================
+
+# --- voltage sweep ------------------------------------------------------------
+V     = -1.d0        # first voltage
+Vf    =  1.0d0       # last voltage
+delv  =  0.01        # voltage step  -> (Vf-V)/delv + 1 voltages
+T     = 300.d0       # temperature of both leads [K]
+mu    = 2            # chemical potential at V = 0 (bias shifts the LEFT lead)
+
+# --- Hamiltonian: chain of Nsites sites -----------------------------------------
+Nsites = 20         # number of sites (old name: Natoms)
+E_CC   =  2.d0       # on-site energy
+t_hop  = -0.4d0      # nearest-neighbour hopping
+U_int  =  0.8        # Hubbard U on every site
+# hubbard_file = U_per_site.dat   # optional: one U per site (overrides U_int)
+
+# --- lead couplings (optional, default 1) ---------------------------------------
+GammaL = 1.0         # left lead -> site 1
+GammaR = 1.0         # right lead -> last site
+
+# --- interactions and energy grid -----------------------------------------------
+order = 2            # 0 = non-interacting, 1 = Hartree-Fock, 2 = second, 3 = third order
+dw    = 2            # grid starts dw below the lowest eigenvalue of H
+up    = 2            # grid ends up above the highest eigenvalue of H
+delta = 0.01         # grid spacing
+
+# --- SCF (Broyden mixing); all optional, defaults shown --------------------------
+alpha_mix = 0.3      # linear mixing weight
+nhist     = 8        # Broyden history length (0 = plain linear mixing)
+maxscf    = 200      # max SCF iterations per voltage
+tolf      = 1.d-6    # converged when max|x_out - x| < tolf
+continuation = T     # start each voltage from the previous converged one

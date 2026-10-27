@@ -1,0 +1,17 @@
+# Runs on every push and pull request: build both codes, run every
+# regression test, and check the shared files are identical.
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # so `git describe` can stamp the version
+      - name: Install gfortran, OpenBLAS, FFTW
+        run: sudo apt-get update && sudo apt-get install -y gfortran libopenblas-dev libfftw3-dev
+      - name: Build and test QUICHOTTE and SANCHO
+        run: make test-all
+      - name: Build the tools
+        run: make tools && make -C SANCHO tools

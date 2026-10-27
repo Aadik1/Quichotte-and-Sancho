@@ -1,0 +1,52 @@
+# --- build products
+build/
+SANCHO/build/
+bin/
+SANCHO/bin/
+*.o
+*.mod
+*.x
+run.out
+
+# --- test scratch
+tests/work/
+SANCHO/tests/work/
+
+# --- run output (keep runs OUTSIDE the repo; these catch accidents)
+Volt_Current_*.dat
+populations.dat
+spectral_function.dat
+scf_V_*.dat
+info_Hamiltonian.dat
+runtime_datasheet.dat
+dI_dV.dat
+helix.xyz
+STM_junction.xyz
+fort.*
+*.out
+*.log
+# ...but the test references ARE committed
+!tests/cases/*/reference/*
+!SANCHO/tests/cases/*/reference/*
+
+# --- HPC sweep state
+SANCHO/hpc/*/sweep/runs/
+SANCHO/hpc/*/sweep/logs/
+SANCHO/hpc/*/sweep/lists/
+SANCHO/hpc/*/sweep/runs.list
+SANCHO/hpc/*/sweep/results_IV.dat
+
+# --- editor / OS junk
+.DS_Store
+._*
+.#*
+\#*\#
+*~
+*.lyx.emergency
+
+# --- never commit keys or credentials
+id_*
+*.pem
+*.key
+github
+github.pub

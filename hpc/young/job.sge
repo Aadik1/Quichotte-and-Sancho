@@ -1,0 +1,25 @@
+#!/bin/bash -l
+# =============================================================================
+# hpc/young/job.sge  --  one run of QUICHOTTE on Young (SGE)
+#   cd <run directory containing input.dat> && qsub ~/QUICHOTTE/hpc/young/job.sge
+# =============================================================================
+#$ -N quichotte
+#$ -P Gold
+#$ -A KCL_Kantorovitch
+#$ -l h_rt=24:00:00
+#$ -l mem=4.5G
+#$ -pe smp 40
+#$ -cwd
+
+EXE=${EXE:-$HOME/QUICHOTTE/bin/quichotte.x}     # <-- path to your build
+
+module unload gcc-libs
+module load gcc-libs/10.2.0
+module load openblas/0.3.13-openmp/gnu-10.2.0
+module load fftw
+
+export OMP_NUM_THREADS=$NSLOTS
+export OPENBLAS_NUM_THREADS=1
+export OMP_STACKSIZE=512M
+
+"$EXE"

@@ -1,0 +1,10 @@
+# QUICHOTTE regression tests:  case  expected-exit-code  reference files...
+order0_noninteracting     0  Volt_Current_0.dat populations.dat
+order1_hartree_fock       0  Volt_Current_1.dat populations.dat
+order2_second_order       0  Volt_Current_2.dat populations.dat
+order2_lefthanded_siteU   0  Volt_Current_2.dat populations.dat
+legacy_inputSOC           0  Volt_Current_1.dat
+order2_from_xyz           0  Volt_Current_2.dat populations.dat
+order1_custom_template    0  Volt_Current_1.dat populations.dat
+error_N_sites_mismatch    1
+error_unknown_hamiltonian 1

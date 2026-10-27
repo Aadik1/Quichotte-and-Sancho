@@ -1,0 +1,9 @@
+# Sancho regression tests:  case  expected-exit-code  reference files...
+order0_noninteracting     0  Volt_Current_0.dat populations.dat
+order1_hartree_fock       0  Volt_Current_1.dat populations.dat
+order2_second_order       0  Volt_Current_2.dat populations.dat
+order3_third_order        0  Volt_Current_3.dat populations.dat
+order2_asymmetric_leads   0  Volt_Current_2.dat
+legacy_natoms             0  Volt_Current_2.dat
+order2_custom_template    0  Volt_Current_2.dat populations.dat
+error_unknown_hamiltonian 1

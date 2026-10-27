@@ -1,0 +1,20 @@
+# Regression test: OLD key names (Natoms, ver, restart) and no Broyden keys (defaults used)
+T = 300.d0
+V = -1.d0
+Vf = 1.0d0
+delv = 0.5
+U_int = 0.8
+mu = 2
+Natoms = 3
+
+E_CC = 2.d0
+t_hop = -0.4d0
+
+order = 2
+
+dw = 1
+up = 1
+delta = 0.01
+
+ver = N
+restart = F

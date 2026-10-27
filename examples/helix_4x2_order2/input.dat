@@ -1,0 +1,50 @@
+# =============================================================================
+# input.dat  --  QUICHOTTE (bin/quichotte.x)
+# Format: key = value, one per line. '#' starts a comment. Order does not matter.
+# Energies in eV, voltages in V, temperature in K (hbar = e = 1).
+# =============================================================================
+
+# --- voltage sweep ------------------------------------------------------------
+V     = -1.d0        # first voltage
+Vf    =  1.d0        # last voltage
+delv  =  0.05        # voltage step  -> (Vf-V)/delv + 1 voltages
+T     = 300.d0       # temperature of both leads [K]
+mu    = 2            # chemical potential at V = 0 (bias shifts the LEFT lead)
+
+# --- which Hamiltonian ----------------------------------------------------------
+hamiltonian = helix  # helix (geometry below), xyz (positions from xyz_file) or
+                     # custom (your own model: build_custom_hamiltonian in src/hamiltonian.f90)
+# xyz_file = molecule.xyz   # hamiltonian = xyz: site positions in chain order
+# N_sites  = 8              # hamiltonian = custom: number of sites
+
+# --- helix geometry (hamiltonian = helix only) ---------------------------------
+N_ions     = 4       # sites per turn
+N_turns    = 2       # number of turns   -> N_ions*N_turns sites, 2x that spin-orbitals
+hel_length = 5.d0    # z-rise over the first N_ions-1 bonds, times N_turns (= end-to-end length for 1 turn)
+hel_radius = 1.d0    # radius of the helix
+hand       = 1       # +1 right-handed, -1 left-handed
+
+# --- Hamiltonian parameters ----------------------------------------------------
+E_CC    =  2.d0      # on-site energy
+t_hop   = -0.4d0     # nearest-neighbour hopping
+lamb    =  0.05d0    # spin-orbit coupling (next-nearest neighbours; helix and xyz)
+U_int   =  0.8d0     # Hubbard U on every site (old name: Hubbard)
+# hubbard_file = U_per_site.dat   # optional: one U per site (overrides U_int)
+
+# --- lead couplings -------------------------------------------------------------
+GammaL_up   = 1.5d0  # left lead -> site 1, spin up
+GammaL_down = 1.d0   # left lead -> site 1, spin down
+GammaR      = 1.d0   # right lead -> last site, both spins (old name: GammaR_both)
+
+# --- interactions and energy grid -----------------------------------------------
+order = 2            # 0 = non-interacting, 1 = Hartree-Fock, 2 = second order
+dw    = 1            # grid starts dw below the lowest eigenvalue of H
+up    = 1            # grid ends up above the highest eigenvalue of H
+delta = 0.01         # grid spacing
+
+# --- SCF (Broyden mixing); all optional, defaults shown --------------------------
+alpha_mix = 0.5d0    # linear mixing weight (old name: pulay)
+nhist     = 16       # Broyden history length (0 = plain linear mixing)
+maxscf    = 300      # max SCF iterations per voltage
+tolf      = 1.d-6    # converged when max|x_out - x| < tolf
+continuation = T     # start each voltage from the previous converged one

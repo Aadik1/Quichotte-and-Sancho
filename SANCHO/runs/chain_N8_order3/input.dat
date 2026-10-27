@@ -1,0 +1,28 @@
+# SANCHO run: 8-site chain, order 3 (parameters of the original 8_atoms/input.dat)
+# Run:  cd SANCHO/runs/chain_N8_order3 && OMP_NUM_THREADS=4 ../../bin/sancho.x
+
+# voltage sweep
+V     = -1.d0
+Vf    =  1.0d0
+delv  =  0.025
+T     = 300.d0
+mu    = 2
+
+# model
+hamiltonian = chain
+N_sites = 8
+E_CC  =  2.d0
+t_hop = -0.4d0
+U_int =  0.8
+
+# interactions and energy grid
+order = 3
+dw    = 3
+up    = 3
+delta = 0.01
+
+# SCF (defaults shown)
+alpha_mix = 0.3
+nhist     = 8
+maxscf    = 200
+tolf      = 1.d-6

@@ -1,0 +1,31 @@
+# Regression test: OLD input file name and key names (pulay, Hubbard, GammaR_both)
+T = 300.d0
+V = -0.5d0
+Vf = 0.5d0
+delv = 0.25
+mu = 2
+
+N_ions = 4
+N_turns = 1
+hel_length = 5.d0
+hel_radius = 1.d0
+hand = 1
+
+order = 1
+
+dw = 1
+up = 1
+delta = 0.01
+
+pulay = 0.5d0
+nhist = 8
+maxscf = 200
+
+E_CC = 2.d0
+t_hop = -0.4d0
+lamb = 0.05d0
+Hubbard = 0.8d0
+
+GammaL_up = 1.5d0
+GammaL_down = 1.d0
+GammaR_both = 1.d0

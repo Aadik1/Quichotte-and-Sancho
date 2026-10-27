@@ -1,0 +1,10 @@
+n_surface_x       = 1
+n_surface_y       = 1
+dx                = 1.5d0
+dy                = 1.5d0
+hz 		  = 0 #4.5
+el_tip            = Au
+el_bridge         = C
+el_surface        = Ag
+n_bridge          = 0
+comment           = STM junction with 2 bridge atoms

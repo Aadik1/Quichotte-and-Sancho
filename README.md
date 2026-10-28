@@ -21,7 +21,7 @@ code in `SANCHO/`: a spinless chain to 3rd order in U, using factorised bubbles.
 
 ```bash
 make                 # build bin/quichotte.x   (gfortran + BLAS/LAPACK + FFTW3)
-make test            # 5 regression tests, a few seconds; all should PASS
+make test            # 9 regression tests (7 physics, 2 input errors); all should PASS
 
 mkdir -p ~/runs/first && cd ~/runs/first
 cp ~/QUICHOTTE/examples/helix_4x2_order2/input.dat .     # then edit it

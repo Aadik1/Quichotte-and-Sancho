@@ -22,7 +22,7 @@ later: `git subtree split --prefix SANCHO -b sancho-only`.
 ```bash
 cd QUICHOTTE/SANCHO
 make                 # build bin/sancho.x   (gfortran + BLAS/LAPACK)
-make test            # 6 regression tests, ~10 s; all should PASS
+make test            # 8 regression tests (7 physics, 1 input error); all should PASS
 
 mkdir -p ~/runs/chain && cd ~/runs/chain
 cp ~/QUICHOTTE/SANCHO/examples/chain_N20_order2/input.dat .     # then edit it

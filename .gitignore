@@ -19,6 +19,8 @@ spectral_function.dat
 scf_V_*.dat
 info_Hamiltonian.dat
 runtime_datasheet.dat
+hamiltonian_matrix.dat
+populations_atoms.dat
 dI_dV.dat
 helix.xyz
 STM_junction.xyz
@@ -28,6 +30,10 @@ fort.*
 # ...but the test references ARE committed
 !tests/cases/*/reference/*
 !SANCHO/tests/cases/*/reference/*
+
+# --- source archives made by archive.sh (kept locally, not committed)
+archive/*
+!archive/.gitkeep
 
 # --- HPC sweep state
 SANCHO/hpc/*/sweep/runs/

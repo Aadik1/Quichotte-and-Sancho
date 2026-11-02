@@ -24,9 +24,19 @@ module Parameters
    integer :: order          !...perturbation order in U: 0, 1 or 2
 
    !...which Hamiltonian to build (see build_hamiltonian in hamiltonian.f90)
-   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'xyz', 'dftb' or 'custom'
-   character(len=256) :: xyz_file = 'molecule.xyz'     !...site positions (hamiltonian = xyz)
-   character(len=256) :: ham_file = 'hamiltonian_blocks_fortran.txt'   !...(hamiltonian = dftb)
+   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'xyz', 'dftb', 'dftb_hs' or 'custom'
+   character(len=256) :: xyz_file = 'molecule.xyz'     !...positions (xyz); elements (dftb_hs)
+   character(len=256) :: ham_file = 'hamiltonian_blocks_fortran.txt'   !...dftb: blocks; dftb_hs: hamsqr1.dat
+   character(len=256) :: overlap_file = 'oversqr.dat'  !...(hamiltonian = dftb_hs)
+   logical :: write_hamiltonian = .false.              !...write H in full precision to hamiltonian_matrix.dat
+
+   !...dftb_hs: elements and their shells / spin-orbit constants (from the input keys
+   !   max_angular_momentum = 'C:p H:s' and soc_xi = 'C:0.00849', xi in eV)
+   character(len=16) :: soc_form = 'dual'              !...'dual' (as DFTB+) or 'onsite'
+   character(len=2), allocatable :: atom_elem(:)       !...element of atom a (N_atoms)
+   character(len=2), allocatable :: elem_name(:)       !...elements given in max_angular_momentum
+   integer, allocatable :: elem_lmax(:)                !...0 = s, 1 = s + p
+   real(dp), allocatable :: elem_xi(:)                 !...p-shell spin-orbit constant [eV]
 
    !...atoms and orbitals. A 'site' is one spatial orbital = one spin pair (2i-1, 2i).
    !   For helix, xyz and custom every atom has one orbital (atom = site). For dftb an

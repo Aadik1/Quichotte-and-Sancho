@@ -1,0 +1,22 @@
+# Error test: dftb_hs needs max_angular_momentum (shells per element).
+hamiltonian = dftb_hs
+ham_file = hamsqr1_CCH.dat
+overlap_file = oversqr_CCH.dat
+xyz_file = CCH.xyz
+soc_xi = C:0.00849
+write_hamiltonian = T
+lead_left_atoms = 1
+lead_right_atoms = 2:3
+T = 300.d0
+V = -0.4d0
+Vf = 0.4d0
+delv = 0.4d0
+mu = -1.0d0
+order = 2
+U_int = 0.5d0
+GammaL_up = 1.0d0
+GammaL_down = 0.8d0
+GammaR = 1.0d0
+dw = 1
+up = 1
+delta = 0.05

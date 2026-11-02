@@ -65,6 +65,7 @@ program QUICHOTTE
    allocate (GammaL(Norb, Norb), GammaR(Norb, Norb))
 
    call build_hamiltonian()          !...model chosen by the input key 'hamiltonian'
+   if (write_hamiltonian) call write_hamiltonian_matrix('hamiltonian_matrix.dat')
 
    !...left lead (spin-dependent) and right lead couple to every orbital of the contact
    !...atoms (lead_left_atoms, lead_right_atoms; defaults: first and last atom)

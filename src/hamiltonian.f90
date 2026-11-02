@@ -7,6 +7,8 @@
 !   helix   build_helix_hamiltonian       helical molecule with SOC (default)
 !   xyz     build_hamiltonian_from_xyz    same terms, site positions from xyz_file
 !   dftb    build_hamiltonian_from_dftb   matrix read from ham_file (soc_dftb block format)
+!   dftb_hs build_hamiltonian_from_dftb_hs  H0 and S from DFTB+ (hamsqr1.dat, oversqr.dat),
+!                                           atomic spin-orbit coupling, Lowdin orthogonalisation
 !   custom  build_custom_hamiltonian      YOUR model: edit the routine at the end
 !
 ! Helix model:
@@ -46,11 +48,13 @@ contains
          call build_hamiltonian_from_xyz(trim(xyz_file))
       case ('dftb')
          call build_hamiltonian_from_dftb(trim(ham_file))
+      case ('dftb_hs')
+         call build_hamiltonian_from_dftb_hs()
       case ('custom')
          call build_custom_hamiltonian()
       case default
          print *, 'ERROR: unknown hamiltonian = ', trim(hamiltonian_model)
-         print *, '       built in: helix, xyz, dftb, custom (see src/hamiltonian.f90)'
+         print *, '       built in: helix, xyz, dftb, dftb_hs, custom (see src/hamiltonian.f90)'
          stop 1
       end select
    end subroutine build_hamiltonian
@@ -385,6 +389,227 @@ contains
       if (max(odd0, oddh) .gt. 1.d-8) write (*, '(a)') &
          ' WARNING: H breaks time reversal by more than 1e-8 eV; spin polarisation of that size is not physical'
    end subroutine report_time_reversal
+
+
+   !===========================================================================
+   ! DFTB H0 + S  (input: hamiltonian = dftb_hs)
+   !
+   ! Builds the orthogonal spin-orbit Hamiltonian directly from the DFTB+
+   ! matrices of a run with WriteHS = Yes (and Scc = No for a non-interacting H0):
+   !
+   !   H = (S^-1/2 x 1) [ H0 x 1 + H_SOC ] (S^-1/2 x 1)        (x 1: spin)
+   !
+   !   H0, S       hamsqr1.dat, oversqr.dat (Hartree -> eV), N x N real
+   !   H_SOC       atomic xi L.S on each p shell, L.S = sum_k L_k sigma_k / 2,
+   !               (L_k)_ab = -i eps_kab in the real (x,y,z) basis;
+   !               soc_form = dual   (default, as DFTB+):  (S Lambda + Lambda S)/2
+   !               soc_form = onsite :  Lambda
+   !   S^-1/2      symmetric (Lowdin) orthogonalisation
+   !
+   ! Orbital order per atom as in DFTB+: s, then p_y, p_z, p_x. Elements and
+   ! shells from xyz_file and max_angular_momentum; xi per element from soc_xi.
+   ! Exact to machine precision and exactly time-reversal symmetric.
+   !===========================================================================
+   subroutine read_xyz_elements(path, n_at, elem)
+      !...element symbols of an .xyz file
+      character(len=*), intent(in) :: path
+      integer, intent(out) :: n_at
+      character(len=2), allocatable, intent(out) :: elem(:)
+      integer :: u, ios, a
+      character(len=256) :: line
+
+      open (newunit=u, file=trim(path), status='old', action='read', iostat=ios)
+      if (ios .ne. 0) then
+         print *, 'ERROR: cannot open xyz_file ', trim(path)
+         stop 1
+      end if
+      read (u, *, iostat=ios) n_at
+      if (ios .ne. 0 .or. n_at .lt. 1) then
+         print *, 'ERROR: first line of ', trim(path), ' must be the number of atoms'
+         stop 1
+      end if
+      read (u, '(a)') line
+      allocate (elem(n_at))
+      do a = 1, n_at
+         read (u, *, iostat=ios) elem(a)
+         if (ios .ne. 0) then
+            print *, 'ERROR: ', trim(path), ' has fewer than', n_at, ' atom lines'
+            stop 1
+         end if
+      end do
+      close (u)
+   end subroutine read_xyz_elements
+
+   subroutine read_dftb_square(path, n, A)
+      !...a DFTB+ square matrix file (hamsqr1.dat / oversqr.dat): '#' header lines, a line
+      !   'REAL NALLORB NKPOINT' values, the k-point index, then n rows of n numbers
+      character(len=*), intent(in) :: path
+      integer, intent(in) :: n
+      real(dp), intent(out) :: A(n, n)
+      integer :: u, ios, i, nall, nk
+      character(len=8) :: realflag
+      character(len=512) :: line
+
+      open (newunit=u, file=trim(path), status='old', action='read', iostat=ios)
+      if (ios .ne. 0) then
+         print *, 'ERROR: cannot open ', trim(path)
+         stop 1
+      end if
+      !...header: skip comments, read 'T  NALLORB  NKPOINT', skip comments, k-point index, comments
+      call next_data_line(u, line)
+      read (line, *, iostat=ios) realflag, nall, nk
+      if (ios .ne. 0 .or. nall .ne. n) then
+         print *, 'ERROR: ', trim(path), ' has', nall, ' orbitals; the geometry and shells give', n
+         stop 1
+      end if
+      if (nk .ne. 1) then
+         print *, 'ERROR: ', trim(path), ': only one k-point (a molecule) is supported'
+         stop 1
+      end if
+      call next_data_line(u, line)              !...k-point index
+      call next_data_line(u, line)              !...first matrix row (after '# MATRIX')
+      backspace (u)
+      do i = 1, n
+         read (u, *, iostat=ios) A(i, :)
+         if (ios .ne. 0) then
+            print *, 'ERROR: ', trim(path), ': cannot read row', i
+            stop 1
+         end if
+      end do
+      close (u)
+   contains
+      subroutine next_data_line(uu, l)
+         integer, intent(in) :: uu
+         character(len=*), intent(out) :: l
+         integer :: io
+         character(len=len(l)) :: t
+         do
+            read (uu, '(a)', iostat=io) l
+            if (io .ne. 0) then
+               print *, 'ERROR: unexpected end of ', trim(path)
+               stop 1
+            end if
+            t = adjustl(l)
+            if (len_trim(t) .gt. 0 .and. t(1:1) .ne. '#') exit
+         end do
+      end subroutine next_data_line
+   end subroutine read_dftb_square
+
+   subroutine build_hamiltonian_from_dftb_hs()
+      real(dp), parameter :: hartree = 27.211386245988d0   !...eV
+      real(dp), allocatable :: S(:, :), H0(:, :), Smh(:, :), ev(:), work(:)
+      complex(dp), allocatable :: Lam(:, :), Sx2(:, :), Sm2(:, :), Hao(:, :)
+      complex(dp) :: Lk(3, 3, 3), sig(2, 2, 3)
+      integer :: N, a, e, i, j, k, p, q, s1, s2, lwork, info, i0
+      integer :: pidx(3)
+      real(dp) :: xi
+
+      N = N_sites
+      allocate (S(N, N), H0(N, N))
+      call read_dftb_square(overlap_file, N, S)
+      call read_dftb_square(ham_file, N, H0)
+      S = 0.5d0*(S + transpose(S)); H0 = 0.5d0*(H0 + transpose(H0))*hartree
+
+      !...S^-1/2 = U diag(1/sqrt(s)) U^T
+      allocate (Smh(N, N), ev(N), work(1))
+      Smh = S
+      call dsyev('V', 'U', N, Smh, N, ev, work, -1, info)
+      lwork = int(work(1)); deallocate (work); allocate (work(lwork))
+      call dsyev('V', 'U', N, Smh, N, ev, work, lwork, info)
+      if (info .ne. 0 .or. minval(ev) .le. 1.d-8) then
+         print *, 'ERROR: overlap matrix is not positive definite (min eigenvalue', minval(ev), ')'
+         stop 1
+      end if
+      do i = 1, N
+         work(1:N) = Smh(:, i)/sqrt(sqrt(ev(i)))
+         Smh(:, i) = work(1:N)
+      end do
+      Smh = matmul(Smh, transpose(Smh))
+      write (*, '(a,es10.2)') ' DFTB H0/S: smallest overlap eigenvalue = ', minval(ev)
+
+      !...angular momentum (L_k)_ab = -i eps_kab, a,b in (x,y,z); Pauli matrices
+      Lk = (0.d0, 0.d0)
+      Lk(1, 2, 3) = -im; Lk(1, 3, 2) = im     !...L_x
+      Lk(2, 3, 1) = -im; Lk(2, 1, 3) = im     !...L_y
+      Lk(3, 1, 2) = -im; Lk(3, 2, 1) = im     !...L_z
+      sig = (0.d0, 0.d0)
+      sig(1, 2, 1) = 1.d0; sig(2, 1, 1) = 1.d0
+      sig(1, 2, 2) = -im; sig(2, 1, 2) = im
+      sig(1, 1, 3) = 1.d0; sig(2, 2, 3) = -1.d0
+      pidx = [2, 3, 1]          !...DFTB+ order p_y, p_z, p_x -> (x,y,z) index 2, 3, 1
+
+      !...Lambda = sum_atoms xi L.S on the p shell (AO basis, spin fastest)
+      allocate (Lam(Norb, Norb)); Lam = (0.d0, 0.d0)
+      do a = 1, N_atoms
+         if (atom_norb(a) .lt. 4) cycle
+         e = findloc(elem_name, atom_elem(a), dim=1)
+         xi = elem_xi(e)
+         if (xi .eq. 0.d0) cycle
+         i0 = atom_first(a)              !...s orbital; p_y, p_z, p_x follow
+         do p = 1, 3
+            do q = 1, 3
+               do s1 = 1, 2
+                  do s2 = 1, 2
+                     i = 2*(i0 + p - 1) + s1; j = 2*(i0 + q - 1) + s2
+                     do k = 1, 3
+                        Lam(i, j) = Lam(i, j) + xi*Lk(k, pidx(p), pidx(q))*sig(s1, s2, k)/2.d0
+                     end do
+                  end do
+               end do
+            end do
+         end do
+      end do
+
+      !...spin doubling, SOC form, Lowdin transform
+      allocate (Sx2(Norb, Norb), Sm2(Norb, Norb), Hao(Norb, Norb))
+      Sx2 = (0.d0, 0.d0); Sm2 = (0.d0, 0.d0); Hao = (0.d0, 0.d0)
+      do j = 1, N
+         do i = 1, N
+            do s1 = 1, 2
+               Sx2(2*(i - 1) + s1, 2*(j - 1) + s1) = S(i, j)
+               Sm2(2*(i - 1) + s1, 2*(j - 1) + s1) = Smh(i, j)
+               Hao(2*(i - 1) + s1, 2*(j - 1) + s1) = H0(i, j)
+            end do
+         end do
+      end do
+      select case (trim(soc_form))
+      case ('dual')
+         Hao = Hao + 0.5d0*(matmul(Sx2, Lam) + matmul(Lam, Sx2))
+      case ('onsite')
+         Hao = Hao + Lam
+      case default
+         print *, 'ERROR: soc_form must be dual or onsite, not ', trim(soc_form)
+         stop 1
+      end select
+      H = matmul(Sm2, matmul(Hao, Sm2))
+      H = 0.5d0*(H + conjg(transpose(H)))
+
+      write (*, '(a,i0,a,i0,a,a)') ' DFTB H0/S Hamiltonian: ', N_atoms, ' atoms, ', N, ' orbitals, SOC form ', &
+         trim(soc_form)
+      do e = 1, size(elem_name)
+         write (*, '(a,a2,a,i0,a,es12.4,a)') '   element ', elem_name(e), ': l_max = ', elem_lmax(e), &
+            ', xi(p) = ', elem_xi(e), ' eV'
+      end do
+      call report_time_reversal()
+      deallocate (S, H0, Smh, ev, work, Lam, Sx2, Sm2, Hao)
+   end subroutine build_hamiltonian_from_dftb_hs
+
+   subroutine write_hamiltonian_matrix(path)
+      !...H in full precision: header, then one line 'i j Re Im' per non-zero element
+      character(len=*), intent(in) :: path
+      integer :: u, i, j
+
+      open (newunit=u, file=trim(path), status='replace')
+      write (u, '(a)') '# QUICHOTTE Hamiltonian [eV]; state index 2*site-1 = up, 2*site = down'
+      write (u, '(a,i0)') '# Norb = ', Norb
+      write (u, '(a)') '#   i   j   Re H_ij   Im H_ij'
+      do j = 1, Norb
+         do i = 1, Norb
+            if (H(i, j) .ne. (0.d0, 0.d0)) write (u, '(2i6,2es25.16)') i, j, real(H(i, j)), aimag(H(i, j))
+         end do
+      end do
+      close (u)
+   end subroutine write_hamiltonian_matrix
 
 
    !===========================================================================

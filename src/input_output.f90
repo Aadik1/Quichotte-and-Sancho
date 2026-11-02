@@ -13,7 +13,7 @@ module InputOutput
    use Constants, only: dp, kb
    use InputParser
    use Parameters
-   use Hamiltonian, only: H, xyz_site_count, dftb_blocks_scan
+   use Hamiltonian, only: H, xyz_site_count, dftb_blocks_scan, read_xyz_elements
    use GreenFunctions, only: U_site, Ev, Eigenvec, GammaL, GammaR
    use SCF, only: alpha_mix, nhist, maxscf, tolf, tolf_order1, continuation, broyden_single_precision
    implicit none
@@ -23,6 +23,8 @@ module InputOutput
    character(len=256) :: hubbard_file = ''   !...optional: per-site U, one value per line
    character(len=256) :: lead_left_atoms = ''    !...atoms the left lead couples to  (default: 1)
    character(len=256) :: lead_right_atoms = ''   !...atoms the right lead couples to (default: N_atoms)
+   character(len=256) :: max_l_string = ''       !...dftb_hs: shells per element, e.g. 'C:p H:s'
+   character(len=256) :: soc_xi_string = ''      !...dftb_hs: p-shell xi per element [eV], e.g. 'C:0.00849'
 
 contains
 
@@ -40,7 +42,20 @@ contains
       !...which Hamiltonian (see build_hamiltonian in hamiltonian.f90)
       call input_get('hamiltonian', hamiltonian_model, default='helix')
       call input_get('xyz_file', xyz_file, default='molecule.xyz')
-      call input_get('ham_file', ham_file, default='hamiltonian_blocks_fortran.txt')
+      if (trim(hamiltonian_model) .eq. 'dftb_hs') then
+         call input_get('ham_file', ham_file, default='hamsqr1.dat')
+         call input_get('overlap_file', overlap_file, default='oversqr.dat')
+         call input_get('max_angular_momentum', max_l_string)
+         call input_get('soc_xi', soc_xi_string, default='')
+         call input_get('soc_form', soc_form, default='dual')
+      else
+         call input_get('ham_file', ham_file, default='hamiltonian_blocks_fortran.txt')
+         call input_get('overlap_file', overlap_file, default='oversqr.dat')
+         call input_get('max_angular_momentum', max_l_string, default='')
+         call input_get('soc_xi', soc_xi_string, default='')
+         call input_get('soc_form', soc_form, default='dual')
+      end if
+      call input_get('write_hamiltonian', write_hamiltonian, default=.false.)
       call input_get('N_sites', N_sites, default=0)
       !...helix geometry: required for hamiltonian = helix, optional otherwise
       if (trim(hamiltonian_model) .eq. 'helix') then
@@ -57,8 +72,8 @@ contains
          call input_get('hand', hand, default=1.d0)
       end if
       !...Hamiltonian and interaction
-      if (trim(hamiltonian_model) .eq. 'dftb') then
-         call input_get('E_CC', E_CC, default=0.d0)     !...not used: H comes from ham_file
+      if (trim(hamiltonian_model) .eq. 'dftb' .or. trim(hamiltonian_model) .eq. 'dftb_hs') then
+         call input_get('E_CC', E_CC, default=0.d0)     !...not used: H comes from the DFTB files
          call input_get('t_hop', t_hop, default=0.d0)
       else
          call input_get('E_CC', E_CC)
@@ -134,6 +149,10 @@ contains
          n_model = sum(norb)
          N_atoms = n_at
          allocate (atom_norb(n_at)); atom_norb = norb
+      case ('dftb_hs')
+         !...atoms from xyz_file, orbitals per atom from max_angular_momentum
+         call setup_dftb_elements()
+         n_model = sum(atom_norb)
       case default
          !...any other model (custom, or one you add to build_hamiltonian):
          !...its size comes from the key N_sites. Unknown names are rejected
@@ -153,6 +172,114 @@ contains
       end if
       N_sites = n_model
    end subroutine set_number_of_sites
+
+   subroutine setup_dftb_elements()
+      !...hamiltonian = dftb_hs: elements of xyz_file, shells from max_angular_momentum
+      !   ('C:p H:s'; s -> 1 orbital, p -> 4: s, p_y, p_z, p_x), p-shell xi from soc_xi
+      !   ('C:0.00849', eV; elements not listed have xi = 0)
+      character(len=8), allocatable :: names(:)
+      character(len=32), allocatable :: vals(:)
+      integer :: n, a, e, k, ios
+      real(dp) :: xv
+
+      call read_xyz_elements(xyz_file, N_atoms, atom_elem)
+      do a = 1, N_atoms
+         atom_elem(a) = element_case(atom_elem(a))
+      end do
+
+      call split_pairs(max_l_string, 'max_angular_momentum', names, vals, n)
+      allocate (elem_name(n), elem_lmax(n), elem_xi(n)); elem_xi = 0.d0
+      do e = 1, n
+         elem_name(e) = element_case(names(e))
+         select case (trim(adjustl(vals(e))))
+         case ('s', 'S'); elem_lmax(e) = 0
+         case ('p', 'P'); elem_lmax(e) = 1
+         case default
+            write (error_unit, *) 'ERROR: max_angular_momentum: only s and p shells are supported, not "', &
+               trim(vals(e)), '" for ', trim(names(e))
+            stop 1
+         end select
+      end do
+      deallocate (names, vals)
+
+      if (len_trim(soc_xi_string) .gt. 0) then
+         call split_pairs(soc_xi_string, 'soc_xi', names, vals, n)
+         do k = 1, n
+            e = findloc(elem_name, element_case(names(k)), dim=1)
+            read (vals(k), *, iostat=ios) xv
+            if (e .eq. 0 .or. ios .ne. 0) then
+               write (error_unit, *) 'ERROR: soc_xi: bad entry ', trim(names(k)), ':', trim(vals(k)), &
+                  ' (element must also appear in max_angular_momentum)'
+               stop 1
+            end if
+            elem_xi(e) = xv
+         end do
+      end if
+
+      allocate (atom_norb(N_atoms))
+      do a = 1, N_atoms
+         e = findloc(elem_name, atom_elem(a), dim=1)
+         if (e .eq. 0) then
+            write (error_unit, *) 'ERROR: element ', trim(atom_elem(a)), ' of ', trim(xyz_file), &
+               ' is missing from max_angular_momentum'
+            stop 1
+         end if
+         atom_norb(a) = merge(4, 1, elem_lmax(e) .eq. 1)
+      end do
+   end subroutine setup_dftb_elements
+
+   subroutine split_pairs(str, key, names, vals, n)
+      !...'C:p H:s' or 'C:0.0085, N:0.012' -> names(:), vals(:)
+      character(len=*), intent(in) :: str, key
+      character(len=8), allocatable, intent(out) :: names(:)
+      character(len=32), allocatable, intent(out) :: vals(:)
+      integer, intent(out) :: n
+      character(len=len(str)) :: s
+      character(len=64) :: tok(100)
+      integer :: p, q, k, c
+
+      s = str
+      do k = 1, len(s)
+         if (s(k:k) .eq. ',') s(k:k) = ' '
+      end do
+      n = 0; p = 1
+      do
+         do while (p .le. len_trim(s))
+            if (s(p:p) .ne. ' ') exit
+            p = p + 1
+         end do
+         if (p .gt. len_trim(s)) exit
+         q = index(s(p:), ' ') + p - 2
+         if (q .lt. p) q = len_trim(s)
+         if (n .lt. size(tok)) then
+            n = n + 1; tok(n) = s(p:q)
+         end if
+         p = q + 1
+      end do
+      if (n .eq. 0) then
+         write (error_unit, *) 'ERROR: ', key, ' is empty'
+         stop 1
+      end if
+      allocate (names(n), vals(n))
+      do k = 1, n
+         c = index(tok(k), ':')
+         if (c .le. 1) then
+            write (error_unit, *) 'ERROR: ', key, ': entries must look like Element:value, got "', trim(tok(k)), '"'
+            stop 1
+         end if
+         names(k) = tok(k)(1:c - 1); vals(k) = tok(k)(c + 1:)
+      end do
+   end subroutine split_pairs
+
+   pure function element_case(e) result(r)
+      !...'c' / 'C' -> 'C',  'CL' / 'cl' -> 'Cl'
+      character(len=*), intent(in) :: e
+      character(len=2) :: r
+      integer :: k
+      r = adjustl(e)
+      k = iachar(r(1:1)); if (k .ge. 97 .and. k .le. 122) r(1:1) = achar(k - 32)
+      k = iachar(r(2:2)); if (k .ge. 65 .and. k .le. 90) r(2:2) = achar(k + 32)
+   end function element_case
 
    subroutine set_atom_map()
       !...atom <-> site (spatial orbital) map. One orbital per atom for helix, xyz

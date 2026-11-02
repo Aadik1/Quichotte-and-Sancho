@@ -11,6 +11,10 @@
 !               -> a converged solution of this kind is not trusted
 ! The worst state (index, n, W) is returned for the error message.
 !
+! check_gf_sanity takes the full (nb, nb, nw) arrays; check_diag_sanity takes
+! only their diagonals (nb, nw), for codes that do not store the full arrays.
+! Both give identical results on the same data.
+!
 ! The files in common/ are IDENTICAL in QUICHOTTE and SANCHO
 ! (checked by `make check-common`).
 !==============================================================================
@@ -19,7 +23,7 @@ module ScfChecks
    use Constants, only: dp, hbar, pi, im
    implicit none
    private
-   public :: check_gf_sanity
+   public :: check_gf_sanity, check_diag_sanity
 
 contains
 
@@ -51,5 +55,39 @@ contains
       end do
       if (runaway) unphysical = .true.
    end subroutine check_gf_sanity
+
+   subroutine check_diag_sanity(Grd, GLd, nb, nw, delta, runaway, unphysical, i_worst, n_worst, w_worst, state_index)
+      !...same checks as check_gf_sanity, on the diagonals Grd(i,w) = G^r_ii(w), GLd(i,w) = G^<_ii(w).
+      !   state_index(i) (optional) is the state number reported in i_worst.
+      integer, intent(in) :: nb, nw
+      complex(dp), intent(in) :: Grd(nb, nw), GLd(nb, nw)
+      real(dp), intent(in) :: delta
+      logical, intent(out) :: runaway, unphysical
+      integer, intent(out) :: i_worst
+      real(dp), intent(out) :: n_worst, w_worst
+      integer, intent(in), optional :: state_index(nb)
+      integer :: i, lab
+      real(dp) :: nocc, wsum
+
+      runaway = .false.; unphysical = .false.
+      i_worst = 1; n_worst = 0.5d0; w_worst = 1.d0
+      do i = 1, nb
+         lab = i
+         if (present(state_index)) lab = state_index(i)
+         nocc = real(-im*hbar*(delta/(2.d0*pi))*sum(GLd(i, :)))
+         wsum = -hbar*(delta/pi)*sum(aimag(Grd(i, :)))
+         if (.not. ieee_is_finite(nocc) .or. .not. ieee_is_finite(wsum)) then
+            runaway = .true.; i_worst = lab; n_worst = nocc; w_worst = wsum
+            return
+         end if
+         if (nocc .lt. -1.d0 .or. nocc .gt. 2.d0) runaway = .true.
+         if (nocc .lt. -0.05d0 .or. nocc .gt. 1.05d0 .or. wsum .lt. 0.5d0) unphysical = .true.
+         if (abs(nocc - 0.5d0) .gt. abs(n_worst - 0.5d0) .or. &
+             (wsum .lt. w_worst .and. abs(n_worst - 0.5d0) .le. 0.55d0)) then
+            i_worst = lab; n_worst = nocc; w_worst = wsum
+         end if
+      end do
+      if (runaway) unphysical = .true.
+   end subroutine check_diag_sanity
 
 end module ScfChecks

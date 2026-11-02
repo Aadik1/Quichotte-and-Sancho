@@ -1,12 +1,16 @@
 !==============================================================================
 ! src/self_energies.f90  --  module SelfEnergies   (QUICHOTTE)
 !
-! Interaction (Hubbard) self-energies of the input Green's functions G_in:
-!   sigma_first_order    first order (Hartree-Fock), static, on-site 2x2 blocks
+! Interaction (Hubbard) self-energies of the input Green's functions:
+!   sigma_first_order    first order (Hartree-Fock), static, on-site 2x2 blocks,
+!                        from G_less_t0 (all sites; zero where U = 0)
 !   sigma2_compute       second order, Sigma^r and Sigma^< for ALL energies at
-!                        once by zero-padded FFT convolutions (FFTW)
-!   sigma_retarded / sigma_lesser   total Sigma^r / Sigma^< at one energy
+!                        once by zero-padded FFT convolutions (FFTW), on the
+!                        ACTIVE block (see green_functions.f90): only the
+!                        interacting sites have non-zero Sigma2
 !   sigma2_init / sigma2_finalize   FFT plans and storage
+! The total Sigma^r = Sigma1 + Sigma2^r and Sigma^< = Sigma2^< enter the Dyson
+! and Keldysh equations in G_at_energy (scf.f90).
 !==============================================================================
 module SelfEnergies
    use Constants, only: dp, int64, hbar, pi, im
@@ -18,8 +22,8 @@ module SelfEnergies
    include 'fftw3.f'
    integer   :: Nf                     !...padded FFT length >= 2*n_omega - 1
    integer(int64) :: plan_fwd, plan_bwd
-   complex(dp), allocatable, dimension(:, :, :) :: Fr, FL        !...(Nf,Norb,Norb): FFT of G^r, G^<
-   complex(dp), allocatable, dimension(:, :, :) :: SigR2, SigL2  !...(Norb,Norb,n_omega)
+   complex(dp), allocatable, dimension(:, :, :) :: Fr, FL        !...(Nf,nA,nA): FFT of G^r, G^<
+   complex(dp), allocatable, dimension(:, :, :) :: SigR2, SigL2  !...(nA,nA,n_omega)
 
 ! Every term of the old direct sums (Omega_r / int_SigLnG) is sum_{k1,k2} A(k1) B(k2) C(iw-k1+k2),
 ! i.e. A(t) B(-t) C(t) after a DFT along omega. Zero-padding to
@@ -67,29 +71,6 @@ contains
 
    end subroutine sigma_first_order
 
-   subroutine sigma_retarded(iw, SigmaR)
-      !...retarded interaction self-energy at omega(iw):
-      !   order 0: 0,  order 1: Sigma1 (Hartree-Fock),  order 2: Sigma1 + Sigma2^r
-      implicit none
-      integer, intent(in) :: iw
-      complex(dp), intent(out) :: SigmaR(Norb, Norb)
-
-      SigmaR = (0.d0, 0.d0)
-      if (order .ge. 1) call sigma_first_order(SigmaR)
-      if (order .eq. 2) SigmaR = SigmaR + SigR2(:, :, iw)
-   end subroutine sigma_retarded
-
-   subroutine sigma_lesser(iw, SigmaL)
-      !...lesser interaction self-energy at omega(iw): non-zero only at order 2
-      !   (the first-order Sigma is static and real-time local, so Sigma1^< = 0)
-      implicit none
-      integer, intent(in) :: iw
-      complex(dp), intent(out) :: SigmaL(Norb, Norb)
-
-      SigmaL = (0.d0, 0.d0)
-      if (order .eq. 2) SigmaL = SigL2(:, :, iw)
-   end subroutine sigma_lesser
-
    !....smallest n >= nmin whose prime factors are only 2,3,5,7 (FFT-friendly)
    integer function good_fft_size(nmin)
       implicit none
@@ -112,8 +93,8 @@ contains
       complex(dp), allocatable :: tmp(:)
 
       Nf = good_fft_size(2*n_omega - 1)
-      allocate (Fr(Nf, Norb, Norb), FL(Nf, Norb, Norb))
-      allocate (SigR2(Norb, Norb, n_omega), SigL2(Norb, Norb, n_omega))
+      allocate (Fr(Nf, nA, nA), FL(Nf, nA, nA))
+      allocate (SigR2(nA, nA, n_omega), SigL2(nA, nA, n_omega))
 
       !....plans are made once, outside any parallel region (planning is not
       !....thread-safe; dfftw_execute_dft on other arrays is)
@@ -154,7 +135,7 @@ contains
    subroutine sigma2_compute(do_lesser)
       implicit none
       logical, intent(in) :: do_lesser
-      integer :: ii, jj, io, jo, l, lm, sp, sp1
+      integer :: ii, jj, ia, ja, io, jo, l, lm, sp, sp1
       real(dp)  :: pp
       complex(dp) :: c
       complex(dp), dimension(2, 2) :: r_ij, L_ij, a_ij, G_ij ! blocks at  +l
@@ -164,24 +145,26 @@ contains
 
       pp = delta/(2.d0*pi)
 
-      !....1. forward FFT of every matrix element of G^r and G^< only
+      !....1. forward FFT of every active matrix element of G^r and G^< only
       !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(ii,jj) SCHEDULE(static)
-      do jj = 1, Norb
-         do ii = 1, Norb
+      do jj = 1, nA
+         do ii = 1, nA
             call load_fft(G_in%r, ii, jj, Fr(:, ii, jj))
             call load_fft(G_in%L, ii, jj, FL(:, ii, jj))
          end do
       end do
       !$OMP END PARALLEL DO
 
-      !....2. per orbital pair: 2x2 spin algebra at every l, then inverse FFT
+      !....2. per pair of active sites: 2x2 spin algebra at every l, then inverse FFT
+      !....   (io, jo = positions of the spin-up states in the active block)
       !$OMP PARALLEL DO COLLAPSE(2) SCHEDULE(dynamic) &
-      !$OMP& PRIVATE(io,jo,l,lm,sp,sp1,c,r_ij,L_ij,a_ij,G_ij,r_ji,L_ji,a_ji,G_ji, &
+      !$OMP& PRIVATE(ia,ja,io,jo,l,lm,sp,sp1,c,r_ij,L_ij,a_ij,G_ij,r_ji,L_ji,a_ji,G_ji, &
       !$OMP&         chi1,chi2,chiL,sR,sL,bufR,bufL)
-      do jo = 1, Norb, 2
-         do io = 1, Norb, 2
+      do ja = 1, nAs
+         do ia = 1, nAs
+            io = pos(2*asite(ia) - 1); jo = pos(2*asite(ja) - 1)
 
-            if (U_site(io)*U_site(jo) == 0.d0) then
+            if (U_site(act(io))*U_site(act(jo)) == 0.d0) then
                SigR2(io:io + 1, jo:jo + 1, :) = (0.d0, 0.d0)
                SigL2(io:io + 1, jo:jo + 1, :) = (0.d0, 0.d0)
                cycle
@@ -215,7 +198,7 @@ contains
                end if
             end do
 
-            c = U_site(io)*U_site(jo)*hbar**2*pp*pp/dble(Nf) !...prefactors added here
+            c = U_site(act(io))*U_site(act(jo))*hbar**2*pp*pp/dble(Nf) !...prefactors added here
 
             do sp1 = 1, 2
                do sp = 1, 2

@@ -38,7 +38,8 @@ program QUICHOTTE
    use InputOutput
    implicit none
    include 'version.inc'      !...code_version, written by the Makefile from `git describe`
-   real(dp) :: V1, J_up, J_down, total_time
+   real(dp) :: V1, J_up, J_down, total_time, mem_gb
+   integer :: n_total
    integer :: k, i, start_tick, end_tick, rate, max_count, n_unconv
    character(len=30) :: vfn
    logical :: fresh, converged
@@ -92,22 +93,15 @@ program QUICHOTTE
    deallocate (Eigenvec, Ev)
 
    !=====================================================================
-   ! Storage: GFs on the whole grid (G_in = SCF input, G_out = SCF output)
+   ! Storage: only the active block on the grid (see green_functions.f90)
    !=====================================================================
-   allocate (G_in%r(Norb, Norb, n_omega), G_in%a(Norb, Norb, n_omega))
-   allocate (G_in%L(Norb, Norb, n_omega), G_in%G(Norb, Norb, n_omega))
-   allocate (G_out%R(Norb, Norb, n_omega), G_out%A(Norb, Norb, n_omega))
-   allocate (G_out%L(Norb, Norb, n_omega), G_out%G(Norb, Norb, n_omega))
-   allocate (G_less_t0(Norb, Norb))
-
-   !...length of the flattened Broyden vector (layout: see pack_gf in linear_algebra.f90)
-   n_full = Norb*Norb
-   n_strict_upper = (n_full - Norb)/2
-   n_upper = n_strict_upper + Norb
-   n_vec = (n_full + n_full + n_strict_upper + n_upper)*n_omega
+   call setup_storage(n_total, mem_gb)
+   call scf_setup_sizes(n_total)
    write (*, *) 'n_vec', n_vec
+   write (*, '(a,f10.3,a,f10.3,a)') ' Memory: stored arrays ~', mem_gb, ' GB, Broyden ~', &
+      (8.d0*4*n_vec + merge(4.d0, 8.d0, broyden_single_precision)*2*nhist*n_vec)/1024.d0**3, ' GB'
+   write (*, '(a,f10.3,a)') '         plus per thread ~', 16.d0*Norb*(Norb + nS + 2)/1024.d0**3, ' GB'
 
-   allocate (work1(Norb, Norb), work2(Norb, Norb), work3(Norb, Norb))
    allocate (S_a(Norb, 3))
 
    !=====================================================================
@@ -154,11 +148,8 @@ program QUICHOTTE
    close (u_runtime)
 
    if (allocated(SigR2)) call sigma2_finalize()
-   deallocate (G_out%L, G_out%G, G_out%R, G_out%A)
-   deallocate (G_in%r, G_in%a, G_in%L, G_in%G)
-   deallocate (work1, work2, work3)
    deallocate (H, U_site, omega, S_a)
-   deallocate (GammaL, GammaR, G_less_t0)
+   deallocate (GammaL, GammaR)
 
    !...non-zero exit code so job scripts can tell a run with unconverged voltages
    if (n_unconv .gt. 0) then

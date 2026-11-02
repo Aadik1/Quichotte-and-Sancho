@@ -15,7 +15,7 @@ module InputOutput
    use Parameters
    use Hamiltonian, only: H, xyz_site_count, dftb_blocks_scan
    use GreenFunctions, only: U_site, Ev, Eigenvec, GammaL, GammaR
-   use SCF, only: alpha_mix, nhist, maxscf, tolf, continuation
+   use SCF, only: alpha_mix, nhist, maxscf, tolf, tolf_order1, continuation, broyden_single_precision
    implicit none
    private
    public :: read_input, setup_hubbard, setup_leads, write_hamiltonian_info
@@ -87,6 +87,8 @@ contains
       call input_get('nhist', nhist, default=16)
       call input_get('maxscf', maxscf, default=300)
       call input_get('tolf', tolf, default=1.d-6)
+      call input_get('tolf_order1', tolf_order1, default=1.d-8)
+      call input_get('broyden_single_precision', broyden_single_precision, default=.true.)
       call input_get('continuation', continuation, default=.true.)
       call input_get('restart', restart_unused, default=.false.)   !...old key, not used
       call input_finish()
@@ -109,7 +111,8 @@ contains
       write (*, *) 'order:', order, 'U_int:', U_int, 'Norb:', Norb
       write (*, *) 'dw:', dw, 'up:', up, 'delta:', delta
       write (*, *) 'SCF: alpha_mix =', alpha_mix, ' nhist =', nhist, ' maxscf =', maxscf, &
-         ' tolf =', tolf, ' continuation = ', continuation
+         ' tolf =', tolf, ' tolf_order1 =', tolf_order1, ' continuation = ', continuation, &
+         ' single-precision history = ', broyden_single_precision
    end subroutine read_input
 
    subroutine set_number_of_sites()
@@ -271,6 +274,7 @@ contains
       if (nhist .lt. 0) call complain('nhist must be >= 0')
       if (maxscf .lt. 1) call complain('maxscf must be >= 1')
       if (tolf .le. 0.d0) call complain('tolf must be > 0')
+      if (tolf_order1 .le. 0.d0) call complain('tolf_order1 must be > 0')
       if (bad) stop 1
 
    contains

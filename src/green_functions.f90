@@ -1,39 +1,68 @@
 !==============================================================================
 ! src/green_functions.f90  --  module GreenFunctions   (QUICHOTTE)
 !
-! Storage for the Green's functions on the energy grid and the routines that
-! do not involve the interaction:
-!   fermi                      Fermi-Dirac distribution
-!   noninteracting_gr_ga       G0^r, G0^a on the whole grid
-!   noninteracting_gl_gg       G0^<, G0^> on the whole grid
-!   complete_input_gf          G^a and G^> of G_in from its G^r and G^<
-!   equal_time_lesser          G^<(t=0) = (delta/2pi) sum_w G^<(w), on-site blocks
-!   print_input_gf / print_output_gf   debug printing
+! Storage for the Green's functions and the quantities derived from them.
 !
-! Naming: G_in  = INPUT Green's functions of the current SCF step
-!         G_out = OUTPUT Green's functions built from the self-energy of G_in
-!         components %r retarded, %a advanced, %L lesser, %G greater,
-!         each (Norb, Norb, n_omega).
+! MEMORY LAYOUT (see the manual, "Memory and the active subspace")
+!   Only the ACTIVE states are stored on the energy grid: both spin states of
+!   every site (orbital) that carries a Hubbard U, plus those of the contact
+!   sites (non-zero GammaL/GammaR). The interaction self-energy lives on the
+!   interacting sites, so the self-consistency closes on the active block:
+!     order 2: G^r, G^< of the active block on the whole grid (G_in)
+!     order 1: only G^<(t=0) on the interacting sites (G_less_t0)
+!     order 0: nothing (no self-consistency)
+!   The full Norb x Norb G^r exists only as a per-energy, per-thread temporary
+!   (scf.f90, G_at_energy). G^a = (G^r)^dagger and G^> = G^< + G^r - G^a are
+!   formed where needed and never stored. The observables (current, spin
+!   texture, spectral function) come from one FINAL SWEEP with the converged
+!   self-energies, which covers every site.
+!
+!   act(k)  full index of active state k (ascending); pos(i) = k, 0 if inactive
+!   sup(:)  support of the lesser self-energy: the active states at order 2,
+!           the contact states at orders 0 and 1
+!   cl(:)   left-contact states (non-zero rows/columns of GammaL), for the current
+!
+! Routines:
+!   fermi                Fermi-Dirac distribution
+!   setup_storage        active subspace and allocations (after the grid is known)
+!   equal_time_lesser    G^<(t=0) on the active sites, from G_in   (order 2)
+!   gather_onsite        G^<(t=0) on chosen sites, from the per-energy blocks onsL
 !==============================================================================
 module GreenFunctions
    use Constants, only: dp, hbar, pi, im
-   use LinearAlgebra, only: invert_complex, hermitian_conjugate
    use Parameters
    use Hamiltonian, only: H
    implicit none
 
    type :: GreenFunctionSet
-      complex(dp), allocatable, dimension(:, :, :) :: r, a, L, G
+      complex(dp), allocatable, dimension(:, :, :) :: r, L   !...(nA, nA, n_omega), order 2 only
    end type GreenFunctionSet
-   type(GreenFunctionSet) :: G_in, G_out
+   type(GreenFunctionSet) :: G_in        !...INPUT Green's functions of the current SCF step
 
    real(dp), allocatable, dimension(:) :: omega    !...energy grid (n_omega)
    real(dp), allocatable, dimension(:) :: U_site   !...Hubbard U per spin-orbital (set on the spin-up index)
    real(dp), allocatable, dimension(:) :: Ev       !...eigenvalues of H
    complex(dp), allocatable, dimension(:, :) :: Eigenvec
-   complex(dp), allocatable, dimension(:, :) :: GammaL, GammaR   !...lead coupling matrices
-   complex(dp), allocatable, dimension(:, :) :: G_less_t0       !...G^<(t=0), on-site 2x2 spin blocks
-   complex(dp), allocatable, dimension(:, :) :: work1, work2, work3
+   complex(dp), allocatable, dimension(:, :) :: GammaL, GammaR   !...lead coupling matrices (Norb, Norb)
+
+   !...equal-time lesser GF, on-site 2x2 spin blocks (Norb, Norb):
+   complex(dp), allocatable, dimension(:, :) :: G_less_t0   !...INPUT of the SCF step (enters Sigma1)
+   complex(dp), allocatable, dimension(:, :) :: G_less_obs  !...from the final sweep, every site (observables)
+
+   !...active subspace
+   integer :: nA, nS, nCL, nAs, n_int_sites
+   integer, allocatable :: act(:), pos(:), sup(:), cl(:), asite(:)
+   logical, allocatable :: site_int(:), site_act(:)
+
+   !...fixed matrices: Hemb = -H + i(GammaL+GammaR)/2, first-order Sigma, lead couplings on sup / cl
+   complex(dp), allocatable, dimension(:, :) :: Hemb, Sig1, GamL_s, GamR_s, GamL_cl
+
+   !...per-energy results of a sweep (memory linear in the number of states)
+   complex(dp), allocatable :: gRd(:, :), gLd(:, :)   !...(nA, n_omega) diagonals of the output G^r, G^<
+   complex(dp), allocatable :: onsL(:, :)             !...(4*N_sites, n_omega) on-site 2x2 blocks of G^<
+   real(dp), allocatable :: dosd(:, :)                !...(Norb, n_omega) Im G^r_ii (final sweep)
+   real(dp), allocatable :: trU(:), trD(:)            !...(n_omega) current integrand, spin up / down
+
    integer :: INFO
 
 contains
@@ -51,118 +80,148 @@ contains
 
    end function fermi
 
-   subroutine noninteracting_gr_ga()
-      !............non-interacting G^r and G^a on the whole grid:
-      !............G0^r = [hbar*w - H + (i/2hbar)(GammaL+GammaR)]^-1,  G0^a = (G0^r)^dagger
-      implicit none
-      integer :: j, i
-      real(dp) :: w
+   !===========================================================================
+   ! setup_storage: active subspace, allocations and a memory estimate.
+   ! Call once, after H, GammaL/R, U_site and the energy grid are set.
+   !===========================================================================
+   subroutine setup_storage(n_vec_out, memory_gb)
+      integer, intent(out) :: n_vec_out
+      real(dp), intent(out) :: memory_gb
+      logical, allocatable :: conL(:), conR(:)
+      integer :: i, k, s, nfull, nsu
+      real(dp) :: bytes
 
-      do j = 1, n_omega
-         work1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) !LK <========= must be +
-         w = omega(j)
+      allocate (site_int(N_sites), site_act(N_sites), pos(Norb), conL(Norb), conR(Norb))
+
+      !.....interacting sites: U /= 0 and order >= 1
+      do s = 1, N_sites
+         site_int(s) = (order .ge. 1 .and. U_site(2*s - 1) .ne. 0.d0)
+      end do
+      n_int_sites = count(site_int)
+
+      !.....contact states (non-zero row or column of Gamma); their sites are active too
+      site_act = site_int
+      do i = 1, Norb
+         conL(i) = any(GammaL(i, :) .ne. (0.d0, 0.d0)) .or. any(GammaL(:, i) .ne. (0.d0, 0.d0))
+         conR(i) = any(GammaR(i, :) .ne. (0.d0, 0.d0)) .or. any(GammaR(:, i) .ne. (0.d0, 0.d0))
+         if (conL(i) .or. conR(i)) site_act((i + 1)/2) = .true.
+      end do
+
+      !.....active states and sites, ascending
+      nA = 2*count(site_act)
+      allocate (act(nA)); pos = 0; k = 0
+      do i = 1, Norb
+         if (site_act((i + 1)/2)) then
+            k = k + 1; act(k) = i; pos(i) = k
+         end if
+      end do
+      nAs = count(site_act)
+      allocate (asite(nAs)); k = 0
+      do s = 1, N_sites
+         if (site_act(s)) then
+            k = k + 1; asite(k) = s
+         end if
+      end do
+
+      !.....left-contact states, and the support of the lesser self-energy
+      nCL = count(conL)
+      allocate (cl(nCL)); k = 0
+      do i = 1, Norb
+         if (conL(i)) then
+            k = k + 1; cl(k) = i
+         end if
+      end do
+      if (order .eq. 2) then
+         nS = nA
+         allocate (sup(nS)); sup = act
+      else
+         nS = count(conL .or. conR)
+         allocate (sup(nS)); k = 0
          do i = 1, Norb
-            work1(i, i) = work1(i, i) + hbar*w
+            if (conL(i) .or. conR(i)) then
+               k = k + 1; sup(k) = i
+            end if
          end do
+      end if
+      allocate (GamL_s(nS, nS), GamR_s(nS, nS), GamL_cl(nCL, nCL))
+      GamL_s = GammaL(sup, sup); GamR_s = GammaR(sup, sup); GamL_cl = GammaL(cl, cl)
 
-         call invert_complex(Norb, work1, info)
-         call hermitian_conjugate(work1, Norb, work2)
+      allocate (Hemb(Norb, Norb), Sig1(Norb, Norb), G_less_t0(Norb, Norb), G_less_obs(Norb, Norb))
+      Sig1 = (0.d0, 0.d0); G_less_t0 = (0.d0, 0.d0); G_less_obs = (0.d0, 0.d0)
+      allocate (onsL(4*N_sites, n_omega), dosd(Norb, n_omega), trU(n_omega), trD(n_omega))
+      onsL = (0.d0, 0.d0)
+      if (order .ge. 1) allocate (gRd(nA, n_omega), gLd(nA, n_omega))
 
-         G_in%r(:, :, j) = work1
-         G_in%a(:, :, j) = work2
-      end do
+      !.....length of the SCF vector
+      n_vec_out = 0
+      if (order .eq. 1) then
+         n_vec_out = 8*n_int_sites                 !...Re, Im of the 2x2 block of each interacting site
+      else if (order .eq. 2) then
+         nfull = nA*nA; nsu = (nfull - nA)/2
+         n_vec_out = (2*nfull + nsu + nsu + nA)*n_omega
+         allocate (G_in%r(nA, nA, n_omega), G_in%L(nA, nA, n_omega))
+      end if
 
-   end subroutine noninteracting_gr_ga
+      !.....memory estimate (stored arrays; see the manual)
+      bytes = 16.d0*4*N_sites*n_omega + 8.d0*Norb*n_omega + 16.d0*n_omega
+      if (order .ge. 1) bytes = bytes + 2*16.d0*nA*n_omega
+      if (order .eq. 2) bytes = bytes + 2*16.d0*nA*nA*n_omega &        !...G_in
+                              + 2*16.d0*nA*nA*n_omega &                !...SigR2, SigL2
+                              + 2*16.d0*nA*nA*(2*n_omega)              !...FFT arrays (padded ~2x)
+      memory_gb = bytes/1024.d0**3
 
-   subroutine noninteracting_gl_gg(Volt)
-      !............non-interacting G^< and G^> on the whole grid:
-      !............G0^< = G0^r [ (i/hbar)(f_L GammaL + f_R GammaR) ] G0^a,  G0^> = G0^< + G0^r - G0^a
-      implicit none
-      real(dp), intent(in) :: Volt
-      real(dp) :: w
-      integer :: j
-
-      work1 = (0.d0, 0.d0); work2 = (0.d0, 0.d0); work3 = (0.d0, 0.d0)
-      do j = 1, n_omega
-         w = omega(j)
-         work1 = G_in%r(:, :, j)
-         work2 = G_in%a(:, :, j)
-
-         work3 = matmul(matmul(work1, im*(fermi(w, Volt)*GammaL + fermi(w, 0.d0)*GammaR)/hbar), work2)
-         G_in%L(:, :, j) = work3
-         G_in%G(:, :, j) = G_in%L(:, :, j) + G_in%R(:, :, j) - G_in%A(:, :, j)
-      end do
-
-   end subroutine noninteracting_gl_gg
-
-!.....G_in%a = (G_in%r)^dagger and G_in%G = G_in%L + G_in%r - G_in%a, from the mixed G_in%r, G_in%L
-   subroutine complete_input_gf()
-      implicit none
-      integer :: iw
-      do iw = 1, n_omega
-         work1 = G_in%r(:, :, iw)
-         call hermitian_conjugate(work1, Norb, work2)
-         G_in%a(:, :, iw) = work2
-      end do
-      G_in%G = G_in%L + G_in%R - G_in%A
-   end subroutine complete_input_gf
+      write (*, '(a,i0,a,i0,a,i0,a,i0,a)') ' Active states: ', nA, ' of ', Norb, '  (', nAs, ' of ', &
+         N_sites, ' sites)'
+      write (*, '(a,i0,a,i0)') ' Interacting sites: ', n_int_sites, '   lesser self-energy support: ', nS
+      deallocate (conL, conR)
+   end subroutine setup_storage
 
    subroutine equal_time_lesser()
-      !.....equal-time lesser GF, G_less_t0 = G^<(t=0) = (delta/2pi) sum_w G^<(w),
-      !.....only the on-site 2x2 spin blocks (all that Sigma1 and spin_texture need)
+      !.....G_less_t0 = G^<(t=0) = (delta/2pi) sum_w G^<(w) from the input G_in,
+      !.....on-site 2x2 spin blocks of the active sites (all that Sigma1 needs)
       implicit none
-      integer :: i, k1, s1, s2
+      integer :: is, a, b, k1
       complex(dp) :: s
       real(dp) :: pp
 
       pp = delta/(2.d0*pi)
       G_less_t0 = (0.d0, 0.d0)
-      do i = 1, Norb, 2
-         do s1 = 0, 1
-            do s2 = 0, 1
-
+      do is = 1, nAs
+         do a = 2*asite(is) - 1, 2*asite(is)
+            do b = 2*asite(is) - 1, 2*asite(is)
                s = (0.d0, 0.d0)
                do k1 = 1, n_omega
-                  s = s + G_in%L(i + s1, i + s2, k1)
+                  s = s + G_in%L(pos(a), pos(b), k1)
                end do
-               G_less_t0(i + s1, i + s2) = s*pp
-
+               G_less_t0(a, b) = s*pp
             end do
          end do
       end do
-
    end subroutine equal_time_lesser
 
-!...Debug print routines (not called by default)
+   subroutine gather_onsite(mask, G)
+      !.....G(a,b) = (delta/2pi) sum_w G^<_ab(w) on the 2x2 block of every masked site,
+      !.....from the per-energy blocks onsL written by a sweep
+      logical, intent(in) :: mask(N_sites)
+      complex(dp), intent(inout) :: G(Norb, Norb)
+      integer :: s, a, b, k, iw
+      complex(dp) :: acc
+      real(dp) :: pp
 
-   subroutine print_output_gf()
-      implicit none
-      integer :: i, j
-
-      write (*, '(/a)') '... GFr:'
-      do i = 1, Norb, 2
-         write (*, '(10(a,2f10.5,a))') (' [', G_out%R(i, j, 1), '] ', j=1, Norb, 2)
+      pp = delta/(2.d0*pi)
+      do s = 1, N_sites
+         if (.not. mask(s)) cycle
+         do b = 1, 2
+            do a = 1, 2
+               k = 4*(s - 1) + 2*(b - 1) + a
+               acc = (0.d0, 0.d0)
+               do iw = 1, n_omega
+                  acc = acc + onsL(k, iw)
+               end do
+               G(2*s - 2 + a, 2*s - 2 + b) = acc*pp
+            end do
+         end do
       end do
-
-      write (*, '(/a)') '... GFl:'
-      do i = 1, Norb, 2
-         write (*, '(10(a,2f10.5,a))') (' [', G_out%L(i, j, 1), '] ', j=1, Norb, 2)
-      end do
-   end subroutine print_output_gf
-
-   subroutine print_input_gf()
-      implicit none
-      integer :: i, j
-
-      write (*, '(/a)') '... GFr:'
-      do i = 1, Norb, 2
-         write (*, '(10(a,2f10.5,a))') (' [', G_in%R(i, j, 1), '] ', j=1, Norb, 2)
-      end do
-
-      write (*, '(/a)') '... GFl:'
-      do i = 1, Norb, 2
-         write (*, '(10(a,2f10.5,a))') (' [', G_in%L(i, j, 1), '] ', j=1, Norb, 2)
-      end do
-   end subroutine print_input_gf
+   end subroutine gather_onsite
 
 end module GreenFunctions

@@ -1,0 +1,42 @@
+# Hexahelicene (C26H16): DFTB+ H0 and S, spin-orbit coupling added by QUICHOTTE.
+#
+# Recommended DFTB route: exactly time-reversal symmetric, and the full-precision
+# matrices straight from DFTB+. Run DFTB+ once WITHOUT spin-orbit coupling and with
+# Scc = No (the Hubbard U is added here; an SCC Hamiltonian would count it twice), with
+#     Options { WriteHS = Yes }
+# DFTB+ writes hamsqr1.dat and oversqr.dat (Hartree) and stops. Copy them and the
+# geometry (for the element of each atom) into the run directory.
+#
+# QUICHOTTE then builds   H = S^-1/2 [ H0 x 1 + xi L.S ] S^-1/2      (eV)
+# 120 orbitals (C: s, p_y, p_z, p_x; H: s) = 120 'sites', 240 states.
+
+hamiltonian = dftb_hs
+ham_file = hamsqr1.dat
+overlap_file = oversqr.dat
+xyz_file = geo_end.xyz                # element symbols, in the DFTB+ atom order
+
+max_angular_momentum = C:p H:s        # as in the DFTB+ input
+soc_xi = C:0.00849                    # p-shell SOC constant [eV]: 0.312 mHa for C (Jha & Heine)
+# soc_form = dual                     # dual (as DFTB+, default) or onsite
+write_hamiltonian = T                 # H in full precision -> hamiltonian_matrix.dat
+
+# leads on the terminal C-C-C units at the two ends of the helix
+lead_left_atoms = 5 7 8
+lead_right_atoms = 24:26
+
+T = 300
+V = 0.0
+Vf = 0.5
+delv = 0.05
+mu = -4.21          # mid-gap
+order = 0
+U_int = 0.0         # hubbard_file = U.dat for one U per orbital (120 lines)
+
+GammaL_up = 0.5
+GammaL_down = 0.5
+GammaR = 0.5
+
+# the spectrum spans ~ -20 to +27 eV and some levels are very narrow: keep delta small
+dw = 1
+up = 1
+delta = 0.01

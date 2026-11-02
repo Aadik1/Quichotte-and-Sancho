@@ -44,7 +44,10 @@ contains
       real(dp) :: arg, w, V
 
       arg = (w - mu + V/hbar)*beta
-      fermi = 1.d0/(exp(hbar*arg) + 1.d0)
+      !...exponent capped at 700 (exp(700) ~ 1e304): with wide spectra (e.g. DFTB, ~50 eV)
+      !...exp would overflow to +Inf. The result is unchanged (f = 1e-304 instead of 0)
+      !...but the debug build, which traps overflow, can run.
+      fermi = 1.d0/(exp(min(hbar*arg, 700.d0)) + 1.d0)
 
    end function fermi
 

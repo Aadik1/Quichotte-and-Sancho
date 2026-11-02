@@ -24,8 +24,17 @@ module Parameters
    integer :: order          !...perturbation order in U: 0, 1 or 2
 
    !...which Hamiltonian to build (see build_hamiltonian in hamiltonian.f90)
-   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'xyz' or 'custom'
+   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'xyz', 'dftb' or 'custom'
    character(len=256) :: xyz_file = 'molecule.xyz'     !...site positions (hamiltonian = xyz)
+   character(len=256) :: ham_file = 'hamiltonian_blocks_fortran.txt'   !...(hamiltonian = dftb)
+
+   !...atoms and orbitals. A 'site' is one spatial orbital = one spin pair (2i-1, 2i).
+   !   For helix, xyz and custom every atom has one orbital (atom = site). For dftb an
+   !   atom has several (C: s, p_y, p_z, p_x in DFTB+ order; H: s).
+   integer :: N_atoms                               !...number of atoms
+   integer, allocatable :: atom_norb(:)             !...spatial orbitals of atom a   (N_atoms)
+   integer, allocatable :: atom_first(:)            !...first site (orbital) of atom a (N_atoms)
+   integer, allocatable :: orb_atom(:)              !...atom of site i               (N_sites)
 
    !...voltage sweep, temperature, chemical potential
    real(dp) :: V, Vf, delv   !...first voltage, last voltage, voltage step [V]

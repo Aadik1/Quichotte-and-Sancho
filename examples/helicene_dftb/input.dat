@@ -1,0 +1,32 @@
+# Hexahelicene (C26H16) with spin-orbit coupling, Hamiltonian from DFTB+ via the soc_dftb
+# pipeline (dftb_soc_hamiltonian.py -> hamiltonian_blocks_fortran.txt).
+# Copy hamiltonian_blocks_fortran.txt (and geo_end.xyz, for reference) into the run directory.
+#
+# A 'site' is now one spatial orbital: 120 orbitals (C: s, p_y, p_z, p_x; H: s), 240 states.
+# populations.dat and spectral_function.dat are per orbital; hubbard_file needs one U per
+# orbital (120 lines, in the order of the block file).
+
+hamiltonian = dftb
+ham_file = hamiltonian_blocks_fortran.txt
+
+# leads on the terminal C-C-C units at the two ends of the helix (atoms from geo_end.xyz)
+lead_left_atoms = 5 7 8
+lead_right_atoms = 24:26
+
+T = 300
+V = 0.0
+Vf = 0.5
+delv = 0.05
+mu = -4.21          # mid-gap: HOMO -5.646 eV, LUMO -2.778 eV (band.out)
+order = 0
+U_int = 0.0
+
+GammaL_up = 0.5
+GammaL_down = 0.5
+GammaR = 0.5
+
+# The spectrum spans about -20 to +27 eV and levels far from the leads are very narrow:
+# delta must resolve them (the SCF sanity check flags it otherwise), so n_omega is large.
+dw = 1
+up = 1
+delta = 0.01

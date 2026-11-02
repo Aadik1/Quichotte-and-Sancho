@@ -65,9 +65,9 @@ program QUICHOTTE
 
    call build_hamiltonian()          !...model chosen by the input key 'hamiltonian'
 
-   !...left lead couples to the first site (spin-dependent), right lead to the last site
-   GammaL = (0.d0, 0.d0); GammaL(1, 1) = GammaL_up; GammaL(2, 2) = GammaL_down
-   GammaR = (0.d0, 0.d0); GammaR(Norb - 1, Norb - 1) = GammaR_both; GammaR(Norb, Norb) = GammaR_both
+   !...left lead (spin-dependent) and right lead couple to every orbital of the contact
+   !...atoms (lead_left_atoms, lead_right_atoms; defaults: first and last atom)
+   call setup_leads()
 
    call setup_hubbard()
 

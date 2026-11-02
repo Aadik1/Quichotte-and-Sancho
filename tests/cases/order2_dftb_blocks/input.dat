@@ -1,0 +1,20 @@
+# Regression test: DFTB Hamiltonian from a block file, order 2, U per orbital (s 0.6, p 0.4, H 0.8).
+# Fixture: atoms C1, C2, H27 of the soc_dftb hexahelicene (9 orbitals); leads on C1 and on C2 + H.
+hamiltonian = dftb
+ham_file = dftb_CCH.txt
+lead_left_atoms = 1
+lead_right_atoms = 2:3
+T = 300.d0
+V = -0.4d0
+Vf = 0.4d0
+delv = 0.4d0
+mu = -1.0d0
+order = 2
+U_int = 0.5d0
+GammaL_up = 1.0d0
+GammaL_down = 0.8d0
+GammaR = 1.0d0
+dw = 1
+up = 1
+delta = 0.05
+hubbard_file = U_per_orbital.dat

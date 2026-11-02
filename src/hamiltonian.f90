@@ -6,6 +6,7 @@
 !
 !   helix   build_helix_hamiltonian       helical molecule with SOC (default)
 !   xyz     build_hamiltonian_from_xyz    same terms, site positions from xyz_file
+!   dftb    build_hamiltonian_from_dftb   matrix read from ham_file (soc_dftb block format)
 !   custom  build_custom_hamiltonian      YOUR model: edit the routine at the end
 !
 ! Helix model:
@@ -18,7 +19,7 @@
 !   * basis order 2i-1 = (site i, up), 2i = (site i, down)
 !   * Hermitian: fill the upper triangle, then call make_hermitian()
 !   * energies in eV; no Hubbard/Hartree terms (U enters via the self-energy)
-!   * left lead on site 1, right lead on site N_sites
+!   * leads: every orbital of lead_left_atoms / lead_right_atoms (default: site 1, site N_sites)
 !==============================================================================
 module Hamiltonian
    use Constants, only: dp, pi, im
@@ -43,11 +44,13 @@ contains
          call build_helix_hamiltonian()
       case ('xyz')
          call build_hamiltonian_from_xyz(trim(xyz_file))
+      case ('dftb')
+         call build_hamiltonian_from_dftb(trim(ham_file))
       case ('custom')
          call build_custom_hamiltonian()
       case default
          print *, 'ERROR: unknown hamiltonian = ', trim(hamiltonian_model)
-         print *, '       built in: helix, xyz, custom (see src/hamiltonian.f90)'
+         print *, '       built in: helix, xyz, dftb, custom (see src/hamiltonian.f90)'
          stop 1
       end select
    end subroutine build_hamiltonian
@@ -204,6 +207,184 @@ contains
       call make_hermitian()
       deallocate (coords)
    end subroutine build_hamiltonian_from_xyz
+
+
+   !===========================================================================
+   ! DFTB HAMILTONIAN  (input: hamiltonian = dftb, ham_file = ...)
+   !
+   ! Reads the orthogonal (Lowdin) spin-orbit Hamiltonian written by the
+   ! soc_dftb pipeline (dftb_soc_hamiltonian.py, export_fortran_blocks):
+   !
+   !   # comment lines
+   !   BLOCK n | Atom_I: a Atom_J: b | Dist: d A | Dim: (2 n_a)x(2 n_b)
+   !     re  im          <- (2 n_a)*(2 n_b) lines, row by row
+   !     ...
+   !
+   ! Rows/columns of a block run over (orbital, spin) of the atom, spin fastest,
+   ! orbitals in DFTB+ order (s, p_y, p_z, p_x) -- the same layout as QUICHOTTE
+   ! (site = orbital, 2i-1 up, 2i down). Energies in eV. Blocks below the export
+   ! cutoff are absent and stay zero. Every atom needs its on-site block (a, a).
+   !
+   ! N_atoms and the orbitals per atom are read from the block headers by
+   ! dftb_blocks_scan (called from read_input); this routine fills H, reports
+   ! the Hermiticity error, symmetrises H, and reports time-reversal violation.
+   !===========================================================================
+   subroutine dftb_blocks_scan(path, n_at, norb)
+      !...number of atoms and spatial orbitals per atom, from the BLOCK headers
+      character(len=*), intent(in) :: path
+      integer, intent(out) :: n_at
+      integer, allocatable, intent(out) :: norb(:)
+      character(len=512) :: line
+      integer :: u, ios, ai, aj, di, dj, pass
+      logical :: ok
+
+      n_at = 0
+      do pass = 1, 2
+         open (newunit=u, file=trim(path), status='old', action='read', iostat=ios)
+         if (ios .ne. 0) then
+            print *, 'ERROR: cannot open ham_file ', trim(path)
+            stop 1
+         end if
+         if (pass .eq. 2) then
+            allocate (norb(n_at)); norb = 0
+         end if
+         do
+            read (u, '(a)', iostat=ios) line
+            if (ios .ne. 0) exit
+            if (index(adjustl(line), 'BLOCK') .ne. 1) cycle
+            call parse_block_header(line, ai, aj, di, dj, ok)
+            if (.not. ok) then
+               print *, 'ERROR: cannot read block header in ', trim(path), ': ', trim(line)
+               stop 1
+            end if
+            if (mod(di, 2) .ne. 0 .or. mod(dj, 2) .ne. 0) then
+               print *, 'ERROR: block dimensions must be even (orbitals x 2 spins): ', trim(line)
+               stop 1
+            end if
+            if (pass .eq. 1) then
+               n_at = max(n_at, ai, aj)
+            else
+               call set_norb(ai, di/2); call set_norb(aj, dj/2)
+            end if
+         end do
+         close (u)
+      end do
+      if (n_at .lt. 1 .or. any(norb .eq. 0)) then
+         print *, 'ERROR: ', trim(path), ' has no BLOCK for some atom (every atom needs its on-site block)'
+         stop 1
+      end if
+   contains
+      subroutine set_norb(a, n)
+         integer, intent(in) :: a, n
+         if (norb(a) .ne. 0 .and. norb(a) .ne. n) then
+            print *, 'ERROR: atom', a, ' has inconsistent block dimensions in ', trim(path)
+            stop 1
+         end if
+         norb(a) = n
+      end subroutine set_norb
+   end subroutine dftb_blocks_scan
+
+   subroutine parse_block_header(line, ai, aj, di, dj, ok)
+      !...'BLOCK n | Atom_I: a Atom_J: b | Dist: d A | Dim: 8x8'  ->  a, b, 8, 8
+      character(len=*), intent(in) :: line
+      integer, intent(out) :: ai, aj, di, dj
+      logical, intent(out) :: ok
+      integer :: k1, k2, k3, kx, ios
+
+      ok = .false.; ai = 0; aj = 0; di = 0; dj = 0
+      k1 = index(line, 'Atom_I:'); k2 = index(line, 'Atom_J:'); k3 = index(line, 'Dim:')
+      if (k1 .eq. 0 .or. k2 .eq. 0 .or. k3 .eq. 0) return
+      read (line(k1 + 7:), *, iostat=ios) ai; if (ios .ne. 0) return
+      read (line(k2 + 7:), *, iostat=ios) aj; if (ios .ne. 0) return
+      kx = index(line(k3:), 'x') + k3 - 1
+      if (kx .lt. k3) return
+      read (line(k3 + 4:kx - 1), *, iostat=ios) di; if (ios .ne. 0) return
+      read (line(kx + 1:), *, iostat=ios) dj; if (ios .ne. 0) return
+      ok = (ai .ge. 1 .and. aj .ge. 1 .and. di .ge. 1 .and. dj .ge. 1)
+   end subroutine parse_block_header
+
+   subroutine build_hamiltonian_from_dftb(path)
+      !...fill H from the block file (layout: see the header of this section)
+      character(len=*), intent(in) :: path
+      character(len=512) :: line
+      integer :: u, ios, ai, aj, di, dj, r, c, r0, c0, nblk
+      real(dp) :: re, imv, herm
+      logical :: ok
+      logical, allocatable :: onsite(:)
+
+      allocate (onsite(N_atoms)); onsite = .false.
+      H = (0.d0, 0.d0); nblk = 0
+      open (newunit=u, file=trim(path), status='old', action='read', iostat=ios)
+      if (ios .ne. 0) then
+         print *, 'ERROR: cannot open ham_file ', trim(path)
+         stop 1
+      end if
+      do
+         read (u, '(a)', iostat=ios) line
+         if (ios .ne. 0) exit
+         if (index(adjustl(line), 'BLOCK') .ne. 1) cycle
+         call parse_block_header(line, ai, aj, di, dj, ok)
+         if (.not. ok .or. di .ne. 2*atom_norb(ai) .or. dj .ne. 2*atom_norb(aj)) then
+            print *, 'ERROR: bad block header in ', trim(path), ': ', trim(line)
+            stop 1
+         end if
+         r0 = 2*(atom_first(ai) - 1); c0 = 2*(atom_first(aj) - 1)
+         do r = 1, di
+            do c = 1, dj
+               read (u, *, iostat=ios) re, imv
+               if (ios .ne. 0) then
+                  print *, 'ERROR: block too short in ', trim(path), ': ', trim(line)
+                  stop 1
+               end if
+               H(r0 + r, c0 + c) = cmplx(re, imv, kind=dp)
+            end do
+         end do
+         if (ai .eq. aj) onsite(ai) = .true.
+         nblk = nblk + 1
+      end do
+      close (u)
+
+      if (.not. all(onsite)) then
+         print *, 'ERROR: ', trim(path), ' is missing the on-site block of some atom'
+         stop 1
+      end if
+      herm = maxval(abs(H - conjg(transpose(H))))
+      H = 0.5d0*(H + conjg(transpose(H)))
+      write (*, '(a,i0,a,i0,a,i0,a)') ' DFTB Hamiltonian: ', nblk, ' blocks, ', N_atoms, ' atoms, ', &
+         N_sites, ' orbitals'
+      write (*, '(a,es10.2,a)') ' max |H - H^dagger| in file = ', herm, ' eV (H symmetrised)'
+      call report_time_reversal()
+      deallocate (onsite)
+   end subroutine build_hamiltonian_from_dftb
+
+   subroutine report_time_reversal()
+      !...A non-magnetic H is time-reversal invariant: every 2x2 spin block
+      !   h0*1 + h.sigma has h0 real and h purely imaginary. Im(h0) and Re(h)
+      !   act like random magnetic fields and can fake spin polarisation, so
+      !   report them next to the genuine spin-orbit part Im(h).
+      integer :: i, j
+      complex(dp) :: b11, b12, b21, b22, h0, hx, hy, hz
+      real(dp) :: odd0, oddh, soc
+
+      odd0 = 0.d0; oddh = 0.d0; soc = 0.d0
+      do j = 1, N_sites
+         do i = 1, N_sites
+            b11 = H(2*i - 1, 2*j - 1); b12 = H(2*i - 1, 2*j)
+            b21 = H(2*i, 2*j - 1);     b22 = H(2*i, 2*j)
+            h0 = 0.5d0*(b11 + b22); hz = 0.5d0*(b11 - b22)
+            hx = 0.5d0*(b12 + b21); hy = 0.5d0*im*(b12 - b21)
+            odd0 = max(odd0, abs(aimag(h0)))
+            oddh = max(oddh, abs(real(hx)), abs(real(hy)), abs(real(hz)))
+            soc = max(soc, abs(aimag(hx)), abs(aimag(hy)), abs(aimag(hz)))
+         end do
+      end do
+      write (*, '(a)') ' Time reversal (all spin blocks h0*1 + h.sigma):'
+      write (*, '(a,es10.2,a)') '   max |Im h0| =', odd0, ' eV   (should be 0)'
+      write (*, '(a,es10.2,a)') '   max |Re h|  =', oddh, ' eV   (should be 0: Zeeman-like)'
+      write (*, '(a,es10.2,a)') '   max |Im h|  =', soc, ' eV   (spin-orbit coupling)'
+      if (max(odd0, oddh) .gt. 1.d-8) write (*, '(a)') &
+         ' WARNING: H breaks time reversal by more than 1e-8 eV; spin polarisation of that size is not physical'
+   end subroutine report_time_reversal
 
 
    !===========================================================================

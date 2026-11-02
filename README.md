@@ -21,7 +21,7 @@ code in `SANCHO/`: a spinless chain to 3rd order in U, using factorised bubbles.
 
 ```bash
 make                 # build bin/quichotte.x   (gfortran + BLAS/LAPACK + FFTW3)
-make test            # 9 regression tests (7 physics, 2 input errors); all should PASS
+make test            # 12 regression tests (9 physics, 3 input errors); all should PASS
 
 mkdir -p ~/runs/first && cd ~/runs/first
 cp ~/QUICHOTTE/examples/helix_4x2_order2/input.dat .     # then edit it
@@ -47,7 +47,8 @@ src/            QUICHOTTE source (one module per file, see below)
 common/         code shared with SANCHO -- IDENTICAL to SANCHO/common/ (make check-common)
 make/           compiler and library settings per platform
 examples/       annotated input files to copy: helix_4x2_order2 (helix), helix_from_xyz
-                (positions from a file), custom_model (your own Hamiltonian)
+                (positions from a file), helicene_dftb (DFTB+ SOC Hamiltonian),
+                custom_model (your own Hamiltonian)
 tests/          regression tests (cases.txt, cases/<name>/, Fortran runner)
 tools/          helix_xyz (geometry -> helix.xyz), dIdV (differential conductance)
 hpc/            job scripts and module lists: create/, young/, archer2/
@@ -61,12 +62,12 @@ archive/        where they go (contents not committed)
 |---|---|---|
 | `src/quichotte.f90` | *(program)* | set-up, energy grid, voltage loop, output files |
 | `src/parameters.f90` | `Parameters` | run parameters, sizes, Pauli matrices, unit numbers |
-| `src/hamiltonian.f90` | `Hamiltonian` | builds H: helix, from `.xyz`, or your own model (`build_custom_hamiltonian`) |
+| `src/hamiltonian.f90` | `Hamiltonian` | builds H: helix, from `.xyz`, from a DFTB block file, or your own model (`build_custom_hamiltonian`) |
 | `src/green_functions.f90` | `GreenFunctions` | storage of the GFs, non-interacting GFs, G<(t=0) |
 | `src/self_energies.f90` | `SelfEnergies` | first-order Σ, second-order Σ by FFT |
 | `src/scf.f90` | `SCF` | SCF driver, residual, Dyson/Keldysh at one energy |
 | `src/observables.f90` | `Observables` | current, spin texture, spectral function |
-| `src/input_output.f90` | `InputOutput` | reads `input.dat`, per-site U, Hamiltonian printout |
+| `src/input_output.f90` | `InputOutput` | reads `input.dat`, atom/orbital map, lead couplings, per-site U, Hamiltonian printout |
 | `common/constants.f90` | `Constants` | `dp`, ħ, k_B, π, i |
 | `common/linear_algebra.f90` | `LinearAlgebra` | LAPACK wrappers, packing of G for Broyden |
 | `common/input_parser.f90` | `InputParser` | `key = value` reader with checks |
@@ -83,17 +84,19 @@ name `inputSOC.dat` and old key names (`Hubbard`, `pulay`, `GammaR_both`) still 
 |---|---|---|
 | `V`, `Vf`, `delv` | required | first voltage, last voltage, step |
 | `T`, `mu` | required | temperature [K], chemical potential [eV] |
-| `hamiltonian` | helix | model: `helix`, `xyz` (positions from `xyz_file`) or `custom` (your own, see below) |
+| `hamiltonian` | helix | model: `helix`, `xyz` (positions from `xyz_file`), `dftb` (matrix from `ham_file`, see below) or `custom` (your own) |
 | `xyz_file` | molecule.xyz | site positions, for `hamiltonian = xyz` |
+| `ham_file` | hamiltonian_blocks_fortran.txt | Hamiltonian blocks, for `hamiltonian = dftb` |
 | `N_sites` | from model | number of sites; required for `custom` |
 | `N_ions`, `N_turns` | required for helix | sites per turn, turns |
 | `hel_length`, `hel_radius`, `hand` | required for helix | helix geometry; `hand` = ±1 |
-| `E_CC`, `t_hop` | required | on-site energy, hopping [eV] |
+| `E_CC`, `t_hop` | required (not for dftb) | on-site energy, hopping [eV] |
 | `lamb` | required for helix, xyz | SOC strength [eV] |
 | `U_int` | required | Hubbard U [eV] |
-| `hubbard_file` | – | one U per site (overrides `U_int`) |
+| `hubbard_file` | – | one U per site, i.e. per spatial orbital for dftb (overrides `U_int`) |
 | `order` | required | 0, 1 or 2 |
-| `GammaL_up`, `GammaL_down`, `GammaR` | required | lead couplings [eV] |
+| `GammaL_up`, `GammaL_down`, `GammaR` | required | lead couplings [eV], on every orbital of the contact atoms |
+| `lead_left_atoms`, `lead_right_atoms` | first, last atom | contact atoms, e.g. `1 2 3` or `24:26` |
 | `dw`, `up`, `delta` | required | energy grid margins and spacing [eV] |
 | `alpha_mix`, `nhist`, `maxscf`, `tolf` | 0.5, 16, 300, 1e-6 | Broyden mixing and convergence |
 | `continuation` | T | start each voltage from the previous converged one |
@@ -118,6 +121,21 @@ converge (they are flagged, the sweep carries on).
 cd /scratch/users/$USER/my_run && cp ~/QUICHOTTE/examples/helix_4x2_order2/input.dat .
 sbatch ~/QUICHOTTE/hpc/create/job.slurm        # or hpc/young/job.sge, hpc/archer2/job.slurm
 ```
+
+## DFTB Hamiltonian (`hamiltonian = dftb`)
+
+Reads the orthogonal (Löwdin) spin-orbit Hamiltonian written by the soc_dftb pipeline
+(`export_fortran_blocks` in `dftb_soc_hamiltonian.py`): blocks `BLOCK n | Atom_I: a
+Atom_J: b | Dist: d | Dim: (2 n_a)x(2 n_b)` followed by one `re im` line per element,
+rows over (orbital, spin) of each atom with spin fastest, energies in eV. The number of
+atoms and the orbitals per atom come from the block headers; every atom needs its
+on-site block. A 'site' is then one spatial orbital (C: s, p_y, p_z, p_x; H: s), so
+`populations.dat`, `spectral_function.dat` and `hubbard_file` are per orbital, and the
+Hubbard U is intra-orbital. The leads couple to every orbital of `lead_left_atoms` /
+`lead_right_atoms`. On reading, the code prints the Hermiticity error of the file and
+how strongly H breaks time reversal (`|Im h0|`, `|Re h|` of the 2x2 spin blocks, which
+must be 0 for a non-magnetic molecule, next to the spin-orbit part `|Im h|`).
+Example: `examples/helicene_dftb/input.dat`.
 
 ## Your own Hamiltonian
 

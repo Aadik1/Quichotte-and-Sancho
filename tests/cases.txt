@@ -8,3 +8,6 @@ order2_from_xyz           0  Volt_Current_2.dat populations.dat
 order1_custom_template    0  Volt_Current_1.dat populations.dat
 error_N_sites_mismatch    1
 error_unknown_hamiltonian 1
+order0_dftb_blocks        0  Volt_Current_0.dat populations.dat
+order2_dftb_blocks        0  Volt_Current_2.dat populations.dat
+error_dftb_lead_overlap   1

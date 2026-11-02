@@ -78,4 +78,5 @@ module Parameters
    integer, parameter :: u_iv = 30         !...Volt_Current_<order>.dat
    integer, parameter :: u_pop = 230       !...populations.dat
    integer, parameter :: u_spec = 71       !...spectral_function.dat
+   integer, parameter :: u_popat = 231     !...populations_atoms.dat
 end module Parameters

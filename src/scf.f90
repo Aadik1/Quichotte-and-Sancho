@@ -136,6 +136,7 @@ contains
       call sweep(M_FINAL, dummy)
       G_less_obs = (0.d0, 0.d0)
       call gather_onsite([(.true., s=1, N_sites)], G_less_obs)
+      call gather_atoms(G_less_obs)
       call final_sanity(runaway, unphysical, i_worst, n_worst, w_worst)
 
       if (.not. converged) then
@@ -305,7 +306,7 @@ contains
       integer, intent(in) :: iw, mode
       real(dp), intent(in) :: Volt
       real(dp) :: F(*)
-      integer :: i, k, s, a, lo, p1, off, info_loc
+      integer :: i, k, s, a, lo, p1, off, info_loc, m
       real(dp) :: w, fL, fR
       complex(dp) :: trc_u, trc_d
       complex(dp), allocatable, dimension(:, :) :: w1, SL, T, blk, GLc, X, Mc
@@ -379,6 +380,13 @@ contains
             blk = matmul(T(lo:lo + 1, :), conjg(transpose(w1(lo:lo + 1, sup))))
             onsL(4*(s - 1) + 1:4*s, iw) = reshape(blk, [4])
          end do
+         if (allocated(atomL)) then             !...intra-atom blocks (per-atom observables)
+            do s = 1, N_atoms
+               lo = 2*atom_first(s) - 1; m = 2*atom_norb(s)
+               atomL(atom_off(s) + 1:atom_off(s) + m*m, iw) = &
+                  reshape(matmul(T(lo:lo + m - 1, :), conjg(transpose(w1(lo:lo + m - 1, sup)))), [m*m])
+            end do
+         end if
          !.....current integrand through the left lead (left-contact block):
          !.....Tr_s { i GammaL [ (f_L - 1) G^< - f_L G^> ] } / 2pi,  G^> = G^< + G^r - G^a
          allocate (GLc(nCL, nCL), X(nCL, nCL), Mc(nCL, nCL))

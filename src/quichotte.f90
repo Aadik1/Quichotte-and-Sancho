@@ -18,6 +18,8 @@
 ! Output files (in the run directory):
 !   Volt_Current_<order>.dat   V, J_up, J_down, J_total, converged (1/0)
 !   populations.dat            V, site, Sx, Sy, Sz, n_down, n_up, n_total
+!   populations_atoms.dat      V, atom, Sx, Sy, Sz, n_down, n_up, n_total, Lx, Ly, Lz
+!                              (only when an atom has more than one orbital)
 !   spectral_function.dat      V, omega, A_ii(omega) for every spin-orbital
 !   scf_V_<V>.dat              SCF convergence history at each voltage
 !   info_Hamiltonian.dat       H, eigenvalues, eigenvectors
@@ -42,7 +44,7 @@ program QUICHOTTE
    integer :: n_total
    integer :: k, i, start_tick, end_tick, rate, max_count, n_unconv
    character(len=30) :: vfn
-   logical :: fresh, converged
+   logical :: fresh, converged, per_atom
 
    !...wall-clock timer
    open (u_runtime, file='runtime_datasheet.dat', status='replace')
@@ -112,6 +114,8 @@ program QUICHOTTE
    open (u_iv, file='Volt_Current_'//trim(vfn)//'.dat', status='replace')
    open (u_pop, file='populations.dat', status='replace')
    open (u_spec, file='spectral_function.dat', status='replace')
+   per_atom = maxval(atom_norb) .gt. 1
+   if (per_atom) open (u_popat, file='populations_atoms.dat', status='replace')
    !...no header lines: the HPC sweep scripts count data lines in these files
 
    !...the first voltage starts from the non-interacting GFs; later ones from the
@@ -132,12 +136,14 @@ program QUICHOTTE
       flush (u_iv)
 
       call spin_texture(V1, S_a, Norb, u_pop)
+      if (per_atom) call atom_texture(V1, u_popat)
       call write_spectral(V1, u_spec)
 
       print *, 'Progress:', 100.d0*k/max(n_volt_steps, 1), '%', J_up, J_down
    end do
 
    close (u_iv); close (u_pop); close (u_spec)
+   if (per_atom) close (u_popat)
 
    !...wall time
    call system_clock(count=end_tick)

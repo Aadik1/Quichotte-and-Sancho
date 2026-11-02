@@ -27,6 +27,7 @@
 !   setup_storage        active subspace and allocations (after the grid is known)
 !   equal_time_lesser    G^<(t=0) on the active sites, from G_in   (order 2)
 !   gather_onsite        G^<(t=0) on chosen sites, from the per-energy blocks onsL
+!   gather_atoms         G^<(t=0) on the intra-atom blocks, from atomL (multi-orbital atoms)
 !==============================================================================
 module GreenFunctions
    use Constants, only: dp, hbar, pi, im
@@ -61,6 +62,8 @@ module GreenFunctions
    complex(dp), allocatable :: gRd(:, :), gLd(:, :)   !...(nA, n_omega) diagonals of the output G^r, G^<
    complex(dp), allocatable :: onsL(:, :)             !...(4*N_sites, n_omega) on-site 2x2 blocks of G^<
    real(dp), allocatable :: dosd(:, :)                !...(Norb, n_omega) Im G^r_ii (final sweep)
+   complex(dp), allocatable :: atomL(:, :)            !...(sum_a (2 n_a)^2, n_omega) intra-atom blocks of G^<
+   integer, allocatable :: atom_off(:)                !...offset of atom a in atomL (only if some n_a > 1)
    real(dp), allocatable :: trU(:), trD(:)            !...(n_omega) current integrand, spin up / down
 
    integer :: INFO
@@ -150,6 +153,15 @@ contains
       Sig1 = (0.d0, 0.d0); G_less_t0 = (0.d0, 0.d0); G_less_obs = (0.d0, 0.d0)
       allocate (onsL(4*N_sites, n_omega), dosd(Norb, n_omega), trU(n_omega), trD(n_omega))
       onsL = (0.d0, 0.d0)
+      if (maxval(atom_norb) .gt. 1) then        !...intra-atom blocks for per-atom <L> (final sweep)
+         allocate (atom_off(N_atoms + 1))
+         atom_off(1) = 0
+         do i = 1, N_atoms
+            atom_off(i + 1) = atom_off(i) + (2*atom_norb(i))**2
+         end do
+         allocate (atomL(atom_off(N_atoms + 1), n_omega))
+         atomL = (0.d0, 0.d0)
+      end if
       if (order .ge. 1) allocate (gRd(nA, n_omega), gLd(nA, n_omega))
 
       !.....length of the SCF vector
@@ -164,6 +176,7 @@ contains
 
       !.....memory estimate (stored arrays; see the manual)
       bytes = 16.d0*4*N_sites*n_omega + 8.d0*Norb*n_omega + 16.d0*n_omega
+      if (allocated(atomL)) bytes = bytes + 16.d0*size(atomL)
       if (order .ge. 1) bytes = bytes + 2*16.d0*nA*n_omega
       if (order .eq. 2) bytes = bytes + 2*16.d0*nA*nA*n_omega &        !...G_in
                               + 2*16.d0*nA*nA*n_omega &                !...SigR2, SigL2
@@ -223,5 +236,24 @@ contains
          end do
       end do
    end subroutine gather_onsite
+
+   subroutine gather_atoms(G)
+      !.....G = (delta/2pi) sum_w G^< on the full (2 n_a x 2 n_a) block of every atom,
+      !.....from atomL written by the final sweep (includes the on-site 2x2 blocks)
+      complex(dp), intent(inout) :: G(Norb, Norb)
+      integer :: at, m, lo, a, b
+      real(dp) :: pp
+
+      if (.not. allocated(atomL)) return
+      pp = delta/(2.d0*pi)
+      do at = 1, N_atoms
+         m = 2*atom_norb(at); lo = 2*atom_first(at) - 2
+         do b = 1, m
+            do a = 1, m
+               G(lo + a, lo + b) = sum(atomL(atom_off(at) + (b - 1)*m + a, :))*pp
+            end do
+         end do
+      end do
+   end subroutine gather_atoms
 
 end module GreenFunctions

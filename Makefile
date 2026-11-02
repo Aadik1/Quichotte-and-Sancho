@@ -12,6 +12,7 @@
 #   make sancho               build SANCHO too (same as: make -C SANCHO)
 #   make test-all             test QUICHOTTE and SANCHO, and run check-common
 #   make clean                remove build/ and bin/ (never touches run output)
+#   make archive              dated source archives -> archive/QUICHOTTE_<date>.tar.gz, SANCHO_<date>.tar.gz
 #
 # Platform settings (compiler, flags, BLAS/LAPACK, FFTW) live in make/<name>.mk.
 # Default: macos on a Mac, linux everywhere else.
@@ -35,7 +36,7 @@ SOURCES = parameters hamiltonian green_functions self_energies scf observables i
 OBJ     = $(addprefix $(BUILD)/,$(addsuffix .o,$(COMMON) $(SOURCES)))
 vpath %.f90 common src
 
-.PHONY: all tools test update-references debug check-common sancho test-all clean help FORCE
+.PHONY: all tools test update-references debug check-common sancho test-all clean archive help FORCE
 all: $(EXE)
 
 $(EXE): $(OBJ) | bin
@@ -100,5 +101,9 @@ $(BUILD) bin:
 clean:
 	rm -rf $(BUILD) bin
 
+# Dated source archives of both codes (see archive.sh for what goes in)
+archive:
+	@./archive.sh all
+
 help:
-	@sed -n '2,18p' Makefile
+	@sed -n '2,19p' Makefile

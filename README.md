@@ -38,7 +38,7 @@ Run from a directory **outside the repo**, one directory per run.
 | ARCHER2 | `make PLATFORM=archer2` | `source hpc/archer2/modules.sh` |
 
 `make help` lists every target: `tools`, `debug` (bounds/NaN checking),
-`update-references`, `check-common`, `sancho`, `test-all`, `clean`.
+`update-references`, `check-common`, `sancho`, `test-all`, `clean`, `archive`.
 
 ## Repository layout
 
@@ -53,6 +53,8 @@ tools/          helix_xyz (geometry -> helix.xyz), dIdV (differential conductanc
 hpc/            job scripts and module lists: create/, young/, archer2/
 docs/manual/    user manual (LyX source + PDF)
 SANCHO/         the SANCHO code, same layout, builds and tests on its own
+archive.sh      makes dated source archives of both codes (make archive)
+archive/        where they go (contents not committed)
 ```
 
 | file | module | contents |
@@ -143,4 +145,20 @@ SANCHO's tests and `check-common`). After a *deliberate* physics change, check
 the numbers, run `make update-references`, and commit the new references with
 the change. The manual's "Code structure" section explains how to add an input
 key, a geometry or a self-energy. Everything (code, tools, test runner) is Fortran;
-the only shell code is the cluster job scripts and SANCHO's ARCHER2 sweep scripts.
+the only shell code is the cluster job scripts, SANCHO's ARCHER2 sweep scripts
+and `archive.sh`.
+
+## Archiving
+
+```bash
+make archive              # or ./archive.sh [all|quichotte|sancho]
+```
+
+writes `archive/QUICHOTTE_<YYYY-MM-DD>.tar.gz` (everything except `SANCHO/`) and
+`archive/SANCHO_<YYYY-MM-DD>.tar.gz` (the `SANCHO/` folder). A second archive on
+the same day gets `_2`, `_3`, ... instead of overwriting. Each holds the working
+tree as it is, uncommitted edits included, minus everything in `.gitignore`
+(build products, run output), and unpacks into a folder of the same name with an
+`ARCHIVE_INFO.txt` recording the date, `git describe`, the commit, and whether
+there were uncommitted changes. The archives stay on your machine: `archive/` is
+in `.gitignore`.

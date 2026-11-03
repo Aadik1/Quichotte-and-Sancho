@@ -17,7 +17,7 @@
 \large QUantum Interacting CHains: Out-of-equilibrium TransporT\\[0.2em]
 \normalsize User manual}
 \author{Aadi Konidena, King's College London}
-\date{October 2026}
+\date{November 2026}
 \end_preamble
 \use_default_options false
 \begin_modules
@@ -191,6 +191,10 @@ QUICHOTTE computes the spin-resolved current–voltage characteristics of a heli
 
 .
  The code was written to study chirality-induced spin selectivity (CISS).
+ The Hamiltonian can be a model helix or a multi-orbital Hamiltonian with spin–orbit coupling from DFTB+
+ (s and p orbitals on every atom),
+ in which every spatial orbital is a Hubbard site;
+ only the interacting and contact orbitals are stored.
  This manual gives the model,
  the equations the code solves,
  the numerical methods,
@@ -993,21 +997,599 @@ nolink "false"
 \end_layout
 
 \begin_layout Subsection
-Leads
+Multi-orbital Hamiltonians from DFTB+
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:dftb"
+
+\end_inset
+
 \end_layout
 
 \begin_layout Standard
-Both leads are in the wide-band limit.
- The left lead couples to site
-\begin_inset space ~
+For a real molecule 
+\begin_inset Formula $H$
 \end_inset
 
-1 with a spin-dependent strength,
- and the right lead couples to the last site:
- 
+ can come from DFTB+ (density-functional tight binding), which gives a minimal valence basis on every atom. Two routes are implemented: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = dftb_hs
+\end_layout
+
+\end_inset
+
+ reads the DFTB+ Hamiltonian and overlap and adds the spin–orbit coupling itself (recommended), and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = dftb
+\end_layout
+
+\end_inset
+
+ reads a ready-made orthogonal spin–orbit Hamiltonian written by the soc_dftb scripts (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_dftb_hs
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_dftb
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+). Examples: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+examples/helicene_dftb_hs
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+examples/helicene_dftb
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Paragraph
+Sites are orbitals.
+\end_layout
+
+\begin_layout Standard
+Every atom carries the shells set by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+max_angular_momentum
+\end_layout
+
+\end_inset
+
+: an s shell, or s and p. The orbitals of an atom are numbered in the DFTB+ order s, 
+\begin_inset Formula $p_{y}$
+\end_inset
+
+, 
+\begin_inset Formula $p_{z}$
+\end_inset
+
+, 
+\begin_inset Formula $p_{x}$
+\end_inset
+
+ (C: 4 orbitals, H: 1), atom after atom. A QUICHOTTE 
+\emph on
+site
+\emph default
+ is one spatial orbital, so the spin-orbital index is still 
+\begin_inset Formula $2i-1$
+\end_inset
+
+ (orbital 
+\begin_inset Formula $i$
+\end_inset
+
+, up) and 
+\begin_inset Formula $2i$
+\end_inset
+
+ (orbital 
+\begin_inset Formula $i$
+\end_inset
+
+, down), and everything that is per site (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+populations.dat
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+spectral_function.dat
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+) is per orbital. The Hubbard term 
+\begin_inset Formula $U_{i}\,n_{i\uparrow}n_{i\downarrow}$
+\end_inset
+
+ acts within each orbital (intra-orbital 
+\begin_inset Formula $U$
+\end_inset
+
+); inter-orbital 
+\begin_inset Formula $U'$
+\end_inset
+
+, Hund's 
+\begin_inset Formula $J$
+\end_inset
+
+ and inter-site interactions are not included. Hopping, overlap and spin–orbit coupling connect the orbitals, so an electron scattered on one orbital propagates through all of them. Orbitals with 
+\begin_inset Formula $U_{i}=0$
+\end_inset
+
+ cost no memory (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:active"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+populations_atoms.dat
+\end_layout
+
+\end_inset
+
+ adds the orbitals of each atom up and gives the orbital moment of its p shell (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:equaltime"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Paragraph
+hamiltonian = dftb_hs (recommended).
+\end_layout
+
+\begin_layout Standard
+Run DFTB+ 
+\emph on
+without
+\emph default
+ spin–orbit coupling and with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Scc = No
+\end_layout
+
+\end_inset
+
+, with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Options { WriteHS = Yes }
+\end_layout
+
+\end_inset
+
+. The Hubbard interaction is added by QUICHOTTE, so a self-consistent (SCC) Hamiltonian would count it twice. DFTB+ writes 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamsqr1.dat
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Formula $H_{0}$
+\end_inset
+
+) and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+oversqr.dat
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Formula $S$
+\end_inset
+
+), real square matrices at the 
+\begin_inset Formula $\Gamma$
+\end_inset
+
+ point in Hartree, and stops. The element of every atom is read from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz_file
+\end_layout
+
+\end_inset
+
+ (first column, in the DFTB+ atom order). With the atomic spin–orbit operator on the p shells,
+\end_layout
+
+\begin_layout Standard
+
 \begin_inset Formula 
 \begin{equation}
-\Gamma_{L}=\operatorname{diag}(\Gamma_{L\uparrow},\Gamma_{L\downarrow},0,\dots,0),\qquad\Gamma_{R}=\operatorname{diag}(0,\dots,0,\Gamma_{R},\Gamma_{R}),
+\Lambda=\sum_{A}\xi_{A}\,\mathbf{L}_{A}\cdot\mathbf{S},\qquad(L_{k})_{ab}=-i\,\varepsilon_{kab}\quad(a,b\in\{x,y,z\}),\qquad\mathbf{S}=\tfrac{1}{2}\boldsymbol{\sigma},
+\end{equation}
+
+\end_inset
+
+QUICHOTTE builds the orthogonal (Löwdin) spin–orbit Hamiltonian
+\end_layout
+
+\begin_layout Standard
+
+\begin_inset Formula 
+\begin{equation}
+H=\bigl(S^{-1/2}\otimes\mathbb{1}\bigr)\Bigl[H_{0}\otimes\mathbb{1}+\tfrac{1}{2}\bigl(\tilde{S}\Lambda+\Lambda\tilde{S}\bigr)\Bigr]\bigl(S^{-1/2}\otimes\mathbb{1}\bigr),\qquad\tilde{S}=S\otimes\mathbb{1},\label{eq:dftbhs}
+\end{equation}
+
+\end_inset
+
+converted to eV (1 Ha = 27.211386245988 eV). The bracket is the 
+\emph on
+dual
+\emph default
+ form DFTB+ uses for a non-orthogonal basis; 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+soc_form = onsite
+\end_layout
+
+\end_inset
+
+ puts 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+ in its place. 
+\begin_inset Formula $S^{-1/2}$
+\end_inset
+
+ comes from the eigenvectors of 
+\begin_inset Formula $S$
+\end_inset
+
+; the smallest eigenvalue of 
+\begin_inset Formula $S$
+\end_inset
+
+ is printed and the run stops if it is below 
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+. The Löwdin orbitals are the orthogonal orbitals closest (in the least-squares sense) to the atomic ones, so they keep their s/p character with small admixtures from the neighbours. 
+\begin_inset Formula $\xi_{A}$
+\end_inset
+
+ is 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+soc_xi
+\end_layout
+
+\end_inset
+
+ (eV, per element; 0 for elements not listed). For carbon 2p, 
+\begin_inset Formula $\xi=0.312$
+\end_inset
+
+ mHa 
+\begin_inset Formula $=8.49$
+\end_inset
+
+ meV (Jha and Heine); note that 0.000312 entered in eV is 27 times too small. This 
+\begin_inset Formula $H$
+\end_inset
+
+ is exactly time-reversal symmetric.
+\end_layout
+
+\begin_layout Paragraph
+hamiltonian = dftb (block file).
+\end_layout
+
+\begin_layout Standard
+Reads the orthogonal spin–orbit Hamiltonian written by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+export_fortran_blocks
+\end_layout
+
+\end_inset
+
+ of the soc_dftb pipeline: blocks 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+BLOCK n | Atom_I: a Atom_J: b | Dist: d | Dim: (2n_a)x(2n_b)
+\end_layout
+
+\end_inset
+
+, each followed by one 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+re im
+\end_layout
+
+\end_inset
+
+ line per element, rows over (orbital, spin) of the atom with spin fastest, in eV. The atoms and their orbitals come from the block headers; every atom needs its on-site block. That matrix is rebuilt from rounded eigenvalues and eigenvectors and breaks time reversal by about 
+\begin_inset Formula $10^{-5}$
+\end_inset
+
+ eV, a sizeable fraction of the spin–orbit coupling, so prefer 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Paragraph
+Checks.
+\end_layout
+
+\begin_layout Standard
+Write each 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ spin block as 
+\begin_inset Formula $H_{ij}=h_{ij}^{0}\mathbf{1}+\mathbf{h}_{ij}\cdot\boldsymbol{\sigma}$
+\end_inset
+
+. Time reversal requires 
+\begin_inset Formula $h^{0}$
+\end_inset
+
+ real and 
+\begin_inset Formula $\mathbf{h}$
+\end_inset
+
+ imaginary; 
+\begin_inset Formula $\operatorname{Im}\mathbf{h}$
+\end_inset
+
+ is the spin–orbit coupling. Both routes print 
+\begin_inset Formula $\max|\operatorname{Im}h^{0}|$
+\end_inset
+
+, 
+\begin_inset Formula $\max|\operatorname{Re}\mathbf{h}|$
+\end_inset
+
+ and 
+\begin_inset Formula $\max|\operatorname{Im}\mathbf{h}|$
+\end_inset
+
+ (with a warning above 
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+ eV), and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+write_hamiltonian = T
+\end_layout
+
+\end_inset
+
+ writes 
+\begin_inset Formula $H$
+\end_inset
+
+ in full precision to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian_matrix.dat
+\end_layout
+
+\end_inset
+
+. For hexahelicene (42 atoms, 120 orbitals) the dftb_hs Hamiltonian agrees with an independent construction to 
+\begin_inset Formula $5\times10^{-14}$
+\end_inset
+
+ eV, and its eigenvalues with the soc_dftb Hamiltonian to 
+\begin_inset Formula $2\times10^{-6}$
+\end_inset
+
+ eV.
+\end_layout
+
+\begin_layout Subsection
+Leads
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:leads"
+
+\end_inset
+
+\end_layout
+
+
+\begin_layout Standard
+Both leads are in the wide-band limit. The left lead couples with a spin-dependent strength to every orbital 
+\begin_inset Formula $i$
+\end_inset
+
+ of the contact atoms 
+\begin_inset Formula $\mathcal{L}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_left_atoms
+\end_layout
+
+\end_inset
+
+, default: the first atom), the right lead to every orbital of 
+\begin_inset Formula $\mathcal{R}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_right_atoms
+\end_layout
+
+\end_inset
+
+, default: the last atom); 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+setup_leads
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/input_output.f90
+\end_layout
+
+\end_inset
+
+. For the helix, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+custom
+\end_layout
+
+\end_inset
+
+ models an atom is one site, so by default the leads sit on site 1 and on the last site. An atom cannot be in both lists.
+\begin_inset Formula 
+\begin{equation}
+\Gamma_{L}=\sum_{i\in\mathcal{L}}\bigl(\Gamma_{L\uparrow}\,|i{\uparrow}\rangle\langle i{\uparrow}|+\Gamma_{L\downarrow}\,|i{\downarrow}\rangle\langle i{\downarrow}|\bigr),\qquad\Gamma_{R}=\Gamma_{R}\sum_{i\in\mathcal{R}}\sum_{\sigma}|i\sigma\rangle\langle i\sigma|,
 \end{equation}
 
 \end_inset
@@ -1026,8 +1608,7 @@ GammaL_up
 
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $\Gamma_{L\downarrow}$
 \end_inset
 
@@ -1041,8 +1622,7 @@ GammaL_down
 
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $\Gamma_{R}$
 \end_inset
 
@@ -1056,8 +1636,7 @@ GammaR
 
 \end_inset
 
-).
- Their retarded self-energy is 
+). Their retarded self-energy is 
 \begin_inset Formula $\Sigma_{\text{leads}}^{r}=-\tfrac{i}{2}(\Gamma_{L}+\Gamma_{R})$
 \end_inset
 
@@ -1218,7 +1797,7 @@ At every grid energy (
 status collapsed
 
 \begin_layout Plain Layout
-interacting_gf
+G_at_energy
 \end_layout
 
 \end_inset
@@ -1248,33 +1827,28 @@ The non-interacting functions
 \begin_inset Formula $G_{0}$
 \end_inset
 
- (
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-noninteracting_gr_ga
-\end_layout
-
-\end_inset
-
-,
- 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-noninteracting_gl_gg
-\end_layout
-
-\end_inset
-
-) are the same equations with 
+ (the starting guess) are the same equations with 
 \begin_inset Formula $\Sigma=0$
 \end_inset
 
-.
+. 
+\begin_inset Formula $\Gr(\omega)$
+\end_inset
+
+ is inverted in full, but only one energy at a time per thread, and only the blocks the self-energy and the observables need are kept (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:active"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
 \end_layout
+
 
 \begin_layout Subsection
 Equal-time quantities
@@ -1324,6 +1898,102 @@ spin_texture
 ).
 \end_layout
 
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:equaltime"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+All observables are taken from one final sweep over the grid with the converged self-energies (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+solve_scf
+\end_layout
+
+\end_inset
+
+). For multi-orbital atoms 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+atom_texture
+\end_layout
+
+\end_inset
+
+ also sums 
+\begin_inset Formula $n_{i\sigma}$
+\end_inset
+
+ and 
+\begin_inset Formula $\langle S_{\alpha}\rangle_{i}$
+\end_inset
+
+ over the orbitals of each atom 
+\begin_inset Formula $A$
+\end_inset
+
+ and gives the orbital moment of its p shell,
+\begin_inset Formula 
+\begin{equation}
+\rho_{ab}^{A}=\sum_{\sigma}\langle c_{a\sigma}^{\dagger}c_{b\sigma}\rangle=-i\hbar\sum_{\sigma}\Gl_{b\sigma,a\sigma}(t{=}0),\qquad\langle L_{k}\rangle_{A}=\sum_{a,b\in p(A)}(L_{k})_{ab}\,\rho_{ab}^{A}\quad[\hbar],
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $(L_{k})_{ab}=-i\varepsilon_{kab}$
+\end_inset
+
+ in the (
+\begin_inset Formula $p_{x}$
+\end_inset
+
+, 
+\begin_inset Formula $p_{y}$
+\end_inset
+
+, 
+\begin_inset Formula $p_{z}$
+\end_inset
+
+) basis (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+populations_atoms.dat
+\end_layout
+
+\end_inset
+
+). It needs the intra-atom blocks of 
+\begin_inset Formula $\Gl(t{=}0)$
+\end_inset
+
+, which the final sweep keeps for multi-orbital atoms. 
+\begin_inset Formula $\mathbf{L}$
+\end_inset
+
+ is evaluated in the Löwdin orbitals, i.e. it is the orbital moment of those orbitals, close to but not identical with that of the bare atomic p orbitals. Spin–orbit coupling and a bias together give a current-induced 
+\begin_inset Formula $\langle\mathbf{L}\rangle$
+\end_inset
+
+, odd in 
+\begin_inset Formula $V$
+\end_inset
+
+.
+\end_layout
+
 \begin_layout Subsection
 Current
 \end_layout
@@ -1345,17 +2015,17 @@ Current
 status collapsed
 
 \begin_layout Plain Layout
-current_integrand
+G_at_energy
 \end_layout
 
 \end_inset
 
- in 
+ (final sweep) in 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-src/observables.f90
+src/scf.f90
 \end_layout
 
 \end_inset
@@ -1716,6 +2386,7 @@ Total self-energy
 \end_layout
 
 \begin_layout Standard
+
 \begin_inset Formula 
 \begin{equation}
 \Sigma^{r}=\Sigma^{(1)}+\Sigma^{(2)r},\qquad\Sigma^{<}=\Sigma^{(2)<},
@@ -1733,29 +2404,29 @@ order
 
 \end_inset
 
+. Both vanish outside the block of the interacting orbitals; they are added to the lead terms in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+G_at_energy
+\end_layout
+
+\end_inset
+
  (
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-sigma_retarded
-\end_layout
-
-\end_inset
-
-,
- 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-sigma_lesser
+src/scf.f90
 \end_layout
 
 \end_inset
 
 ).
 \end_layout
+
 
 \begin_layout Section
 Self-consistency
@@ -1824,7 +2495,18 @@ nolink "false"
 \begin_inset Formula $\Gl$
 \end_inset
 
- on the whole grid are packed into one real vector 
+ on the active block (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:active"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+) and the whole grid are packed into one real vector 
 \begin_inset Formula $x$
 \end_inset
 
@@ -1852,7 +2534,7 @@ common/linear_algebra.f90
  Per energy the vector holds 
 \begin_inset Formula 
 \[
-\bigl[\operatorname{Re}\Gr_{ab}\;(N_{\text{orb}}^{2})\;\big|\;\operatorname{Im}\Gr_{ab}\;(N_{\text{orb}}^{2})\;\big|\;\operatorname{Re}\Gl_{a<b}\;\big|\;\operatorname{Im}\Gl_{a\le b}\bigr].
+\bigl[\operatorname{Re}\Gr_{ab}\;(n_{A}^{2})\;\big|\;\operatorname{Im}\Gr_{ab}\;(n_{A}^{2})\;\big|\;\operatorname{Re}\Gl_{a<b}\;\big|\;\operatorname{Im}\Gl_{a\le b}\bigr].
 \]
 
 \end_inset
@@ -1882,12 +2564,223 @@ Only the independent half of
 status collapsed
 
 \begin_layout Plain Layout
-scf_residual
+scf_residual2
 \end_layout
 
 \end_inset
 
 ).
+\end_layout
+
+\begin_layout Standard
+This is order 2. At order 1 the self-energy depends only on the on-site 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ blocks of 
+\begin_inset Formula $\Gl(t{=}0)$
+\end_inset
+
+ on the interacting orbitals, so those are mixed instead: a vector of 8 real numbers per interacting orbital (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+scf_residual1
+\end_layout
+
+\end_inset
+
+). The fixed point is the same, and it is reached in fewer steps. At order 0 there is nothing to solve.
+\end_layout
+
+
+\begin_layout Subsection
+Active subspace, final sweep and memory
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:active"
+
+\end_inset
+
+\end_layout
+
+\begin_layout Standard
+The self-energies are non-zero only on the 
+\emph on
+interacting
+\emph default
+ orbitals (
+\begin_inset Formula $U_{i}\neq0$
+\end_inset
+
+), and the current only needs the left-contact block. QUICHOTTE therefore stores Green's functions only on the 
+\emph on
+active
+\emph default
+ states 
+\begin_inset Formula $A$
+\end_inset
+
+: the interacting orbitals and the contact orbitals, 
+\begin_inset Formula $n_{A}$
+\end_inset
+
+ spin-orbitals in all (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+setup_storage
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/green_functions.f90
+\end_layout
+
+\end_inset
+
+). At each energy the full 
+\begin_inset Formula $\Gr$
+\end_inset
+
+ is formed and inverted, one energy per thread, and then reduced:
+\end_layout
+
+\begin_layout Itemize
+order 2: 
+\begin_inset Formula $\Gr_{AA}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Gl_{AA}=\Gr_{AA}\,\Sigma_{AA}^{<}\,\Ga_{AA}$
+\end_inset
+
+, where 
+\begin_inset Formula $\Sigma^{<}$
+\end_inset
+
+ (leads plus second order) lives on 
+\begin_inset Formula $A$
+\end_inset
+
+; these, 
+\begin_inset Formula $\Sigma^{(2)}$
+\end_inset
+
+ and the FFT work arrays are 
+\begin_inset Formula $\propto n_{A}^{2}N_{\omega}$
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Itemize
+order 1: only the on-site 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ blocks of 
+\begin_inset Formula $\Gl$
+\end_inset
+
+ on the interacting orbitals, summed over energy;
+\end_layout
+
+\begin_layout Itemize
+order 0: nothing but the observables.
+\end_layout
+
+\begin_layout Standard
+After convergence one 
+\emph on
+final sweep
+\emph default
+ with the converged self-energies gives every observable: the current from the left-contact block, 
+\begin_inset Formula $A_{aa}(\omega)$
+\end_inset
+
+ and the on-site blocks of 
+\begin_inset Formula $\Gl(t{=}0)$
+\end_inset
+
+ of every orbital, and for multi-orbital atoms the intra-atom blocks. The run prints its estimate (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Memory: stored arrays ~ ... GB
+\end_layout
+
+\end_inset
+
+). A 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+ with 
+\begin_inset Formula $U$
+\end_inset
+
+ on part of the molecule therefore saves memory and time in proportion. Measured on a 24-site helix (
+\begin_inset Formula $\delta=0.01$
+\end_inset
+
+ eV), against the version that stored every 
+\begin_inset Formula $G$
+\end_inset
+
+ in full:
+\end_layout
+
+\begin_layout Itemize
+order 2, 
+\begin_inset Formula $U$
+\end_inset
+
+ on every site: 0.85 GB to 0.48 GB, same number of steps;
+\end_layout
+
+\begin_layout Itemize
+order 2, 
+\begin_inset Formula $U$
+\end_inset
+
+ on 8 of 24 sites: 0.85 GB to 0.09 GB, 3.5 times faster;
+\end_layout
+
+\begin_layout Itemize
+order 1: 0.77 GB to 0.009 GB; order 0: 0.14 GB to 0.008 GB.
+\end_layout
+
+\begin_layout Standard
+With 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+broyden_single_precision = F
+\end_layout
+
+\end_inset
+
+ the order-2 SCF histories are bit-identical to that version, and the observables agree to 
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+ (they now come from the final sweep instead of the last SCF input).
 \end_layout
 
 \begin_layout Subsection
@@ -2007,6 +2900,37 @@ nhist
  the vector length.
 \end_layout
 
+\begin_layout Standard
+With 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+broyden_single_precision = T
+\end_layout
+
+\end_inset
+
+ (default) the history 
+\begin_inset Formula $(\Delta F_{k},u_{k})$
+\end_inset
+
+ is kept in single precision, which halves its memory; 
+\begin_inset Formula $x$
+\end_inset
+
+, 
+\begin_inset Formula $F$
+\end_inset
+
+ and all dot products stay in double precision. In the tests this changes neither the number of steps nor the solution (differences below 
+\begin_inset Formula $10^{-13}$
+\end_inset
+
+).
+\end_layout
+
+
 \begin_layout Subsection
 Convergence
 \end_layout
@@ -2044,6 +2968,21 @@ maxscf
 \end_inset
 
  steps are taken.
+ At order 1 the threshold is 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+tolf_order1
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+ by default).
  The history of every voltage is in 
 \begin_inset Flex Code
 status collapsed
@@ -2406,7 +3345,7 @@ examples/helix_4x2_order2/input.dat
 
 \begin_layout Standard
 \begin_inset Tabular
-<lyxtabular version="3" rows="29" columns="4">
+<lyxtabular version="3" rows="39" columns="4">
 <features booktabs="true" islongtable="true" longtabularalignment="center">
 <column alignment="none" valignment="top" special=">{\ttfamily}l">
 <column alignment="left" valignment="top">
@@ -2577,7 +3516,7 @@ chemical potential at
 \begin_inset Text
 
 \begin_layout Plain Layout
-hamiltonian 
+hamiltonian
 \end_layout
 
 \end_inset
@@ -2586,7 +3525,7 @@ hamiltonian
 \begin_inset Text
 
 \begin_layout Plain Layout
-helix 
+helix
 \end_layout
 
 \end_inset
@@ -2604,7 +3543,79 @@ helix
 \begin_inset Text
 
 \begin_layout Plain Layout
-model: helix, xyz or custom (Section 9) 
+model: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helix
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb
+\end_layout
+
+\end_inset
+
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:dftb"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+) or 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+custom
+\end_layout
+
+\end_inset
+
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+)
 \end_layout
 
 \end_inset
@@ -2615,7 +3626,7 @@ model: helix, xyz or custom (Section 9)
 \begin_inset Text
 
 \begin_layout Plain Layout
-xyz_file 
+xyz_file
 \end_layout
 
 \end_inset
@@ -2624,7 +3635,7 @@ xyz_file
 \begin_inset Text
 
 \begin_layout Plain Layout
-molecule.xyz 
+molecule.xyz
 \end_layout
 
 \end_inset
@@ -2642,7 +3653,367 @@ molecule.xyz
 \begin_inset Text
 
 \begin_layout Plain Layout
-site positions, for hamiltonian = xyz 
+site positions (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+); element of every atom (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ham_file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+see meaning
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DFTB+ Hamiltonian: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamsqr1.dat
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+, default) or the block file (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb
+\end_layout
+
+\end_inset
+
+, default 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian_blocks_fortran.txt
+\end_layout
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+overlap_file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+oversqr.dat
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DFTB+ overlap (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+max_angular_momentum
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+shells per element as in DFTB+, e.g. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+C:p H:s
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+soc_xi
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+none
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+p-shell spin–orbit constant per element [eV], e.g. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+C:0.00849
+\end_layout
+
+\end_inset
+
+; none: no SOC
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+soc_form
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dual
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dual
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\tfrac12(\tilde S\Lambda+\Lambda\tilde S)$
+\end_inset
+
+ as DFTB+, or 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+onsite
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+write_hamiltonian
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+write 
+\begin_inset Formula $H$
+\end_inset
+
+ in full precision to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian_matrix.dat
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \end_inset
@@ -2909,7 +4280,7 @@ E_CC
 \begin_inset Text
 
 \begin_layout Plain Layout
-required 
+required (not DFTB) 
 \end_layout
 
 \end_inset
@@ -2951,7 +4322,7 @@ t_hop
 \begin_inset Text
 
 \begin_layout Plain Layout
-required 
+required (not DFTB) 
 \end_layout
 
 \end_inset
@@ -3118,7 +4489,11 @@ U_int
 
 \end_inset
 
-) 
+); per orbital for DFTB; orbitals with 
+\begin_inset Formula $U=0$
+\end_inset
+
+ are not stored 
 \end_layout
 
 \end_inset
@@ -3292,6 +4667,112 @@ GammaR_both
 
 ,
  both spins [eV] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+lead_left_atoms
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+first atom
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+contact atoms of the left lead: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+1 2 5
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+1,2
+\end_layout
+
+\end_inset
+
+ or 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+24:26
+\end_layout
+
+\end_inset
+
+; every orbital of these atoms couples
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+lead_right_atoms
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+last atom
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+contact atoms of the right lead
 \end_layout
 
 \end_inset
@@ -3559,6 +5040,86 @@ convergence threshold on
 \begin_inset Text
 
 \begin_layout Plain Layout
+tolf_order1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+convergence threshold at order 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+broyden_single_precision
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+T
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Broyden history in single precision (half the memory)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 continuation 
 \end_layout
 
@@ -3701,19 +5262,40 @@ Runtime and memory grow as
 \begin_inset Formula $N_{\omega}\propto(\text{bandwidth}+\code{dw}+\code{up})/\delta$
 \end_inset
 
-.
- The Broyden history needs 
+, and at order 2 as 
+\begin_inset Formula $n_{A}^{2}$
+\end_inset
+
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:active"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). The Broyden history needs 
 \begin_inset Formula $2\,\code{nhist}\cdot n$
 \end_inset
 
- doubles,
- with 
-\begin_inset Formula $n\approx3N_{\text{orb}}^{2}N_{\omega}$
+ numbers (single precision by default), with 
+\begin_inset Formula $n\approx3n_{A}^{2}N_{\omega}$
 \end_inset
 
-.
- 
+ at order 2 and 8 per interacting orbital at order 1. DFTB spectra are wide (about 50 eV for hexahelicene) and have narrow levels: keep 
+\begin_inset Formula $\delta$
+\end_inset
+
+ small and put 
+\begin_inset Formula $U$
+\end_inset
+
+ only where it matters.
 \end_layout
+
 
 \begin_layout Itemize
 If a voltage does not converge,
@@ -3770,7 +5352,7 @@ name "sec:output"
 
 \begin_layout Standard
 \begin_inset Tabular
-<lyxtabular version="3" rows="7" columns="2">
+<lyxtabular version="3" rows="9" columns="2">
 <features booktabs="true" islongtable="true" longtabularalignment="center">
 <column alignment="none" valignment="top" special=">{\ttfamily}p{5.0cm}">
 <column alignment="none" valignment="top" width="10.2cm">
@@ -3840,7 +5422,7 @@ one line per voltage:
 \begin_inset Text
 
 \begin_layout Plain Layout
-populations.dat 
+populations.dat
 \end_layout
 
 \end_inset
@@ -3849,43 +5431,110 @@ populations.dat
 \begin_inset Text
 
 \begin_layout Plain Layout
-one line per site per voltage:
- 
+one line per site (orbital, for DFTB) per voltage: 
 \begin_inset Formula $V$
 \end_inset
 
-,
- site,
- 
+, site, 
 \begin_inset Formula $\langle S_{x}\rangle$
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $\langle S_{y}\rangle$
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $\langle S_{z}\rangle$
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $n_{\downarrow}$
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $n_{\uparrow}$
 \end_inset
 
-,
- 
+, 
 \begin_inset Formula $n$
 \end_inset
 
- 
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+populations_atoms.dat
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+multi-orbital runs only; one line per atom per voltage: 
+\begin_inset Formula $V$
+\end_inset
+
+, atom, 
+\begin_inset Formula $\langle S_{x}\rangle$
+\end_inset
+
+, 
+\begin_inset Formula $\langle S_{y}\rangle$
+\end_inset
+
+, 
+\begin_inset Formula $\langle S_{z}\rangle$
+\end_inset
+
+, 
+\begin_inset Formula $n_{\downarrow}$
+\end_inset
+
+, 
+\begin_inset Formula $n_{\uparrow}$
+\end_inset
+
+, 
+\begin_inset Formula $n$
+\end_inset
+
+, 
+\begin_inset Formula $\langle L_{x}\rangle$
+\end_inset
+
+, 
+\begin_inset Formula $\langle L_{y}\rangle$
+\end_inset
+
+, 
+\begin_inset Formula $\langle L_{z}\rangle$
+\end_inset
+
+ (units of 
+\begin_inset Formula $\hbar$
+\end_inset
+
+; Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:equaltime"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+)
 \end_layout
 
 \end_inset
@@ -3988,6 +5637,50 @@ info_Hamiltonian.dat
  a Hermiticity check,
  eigenvalues,
  eigenvectors 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hamiltonian_matrix.dat
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+i j Re Im
+\end_layout
+
+\end_inset
+
+ of every non-zero element of 
+\begin_inset Formula $H$
+\end_inset
+
+ in full precision (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+write_hamiltonian = T
+\end_layout
+
+\end_inset
+
+)
 \end_layout
 
 \end_inset
@@ -5271,65 +6964,75 @@ hubbard_file
 
 \end_inset
 
-). The interaction between different orbitals is then neglected.
+). The interaction between different orbitals is then neglected; this is how the DFTB+ models work (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:dftb"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
 \end_layout
 
 \begin_layout Enumerate
-
 \series bold
 Contacts.
 \series default
- The left lead couples to site 
-\begin_inset Formula $1$
+ The left lead couples to every orbital of the atoms 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_left_atoms
+\end_layout
+
 \end_inset
 
- (indices 1, 2), the right lead to site 
+, the right lead to those of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_right_atoms
+\end_layout
+
+\end_inset
+
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:leads"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). For 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+custom
+\end_layout
+
+\end_inset
+
+ an atom is a site, and the defaults are site 1 and site 
 \begin_inset Formula $N_\text{sites}$
 \end_inset
 
- (indices 
-\begin_inset Formula $N_\text{orb}-1$
-\end_inset
-
-, 
-\begin_inset Formula $N_\text{orb}$
-\end_inset
-
-). Number your sites so that the contacted ones come first and last, or change the two lines that set 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaL
+.
 \end_layout
 
-\end_inset
-
- and 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaR
-\end_layout
-
-\end_inset
-
- in 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-src/quichotte.f90
-\end_layout
-
-\end_inset
-
-. 
-\end_layout
 
 \begin_layout Standard
-Anything else is allowed. Hoppings may connect any pair of sites and have any range, on-site energies may differ, spin-flip terms may appear anywhere, and the matrix may be dense. The second-order self-energy is computed for every pair of sites, so it does not assume any particular connectivity. The energy grid needs no change: it is built from the eigenvalues of whatever 
+Anything else is allowed. Hoppings may connect any pair of sites and have any range, on-site energies may differ, spin-flip terms may appear anywhere, and the matrix may be dense. The second-order self-energy is computed for every pair of interacting sites, so it does not assume any particular connectivity. The energy grid needs no change: it is built from the eigenvalues of whatever 
 \begin_inset Formula $H$
 \end_inset
 
@@ -5691,13 +7394,7 @@ Hamiltonian
 \begin_layout Plain Layout
 
 \size small
-helix geometry,
- SOC,
- 
-\begin_inset Formula $H$
-\end_inset
-
- (analytic or from 
+helix, from 
 \begin_inset Flex Code
 status collapsed
 
@@ -5707,7 +7404,27 @@ status collapsed
 
 \end_inset
 
-) 
+, from DFTB+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb
+\end_layout
+
+\end_inset
+
+), or your own; time-reversal check
 \end_layout
 
 \end_inset
@@ -5742,32 +7459,11 @@ GreenFunctions
 \begin_layout Plain Layout
 
 \size small
-storage of 
-\begin_inset Formula $G_{\text{in}}$
-\end_inset
-
-,
- 
-\begin_inset Formula $G_{\text{out}}$
-\end_inset
-
-,
- 
-\begin_inset Formula $\Gamma$
-\end_inset
-
-,
- grid;
- 
-\begin_inset Formula $G_{0}$
-\end_inset
-
-;
- 
+active subspace and storage, Fermi function, 
 \begin_inset Formula $\Gl(t{=}0)$
 \end_inset
 
- 
+
 \end_layout
 
 \end_inset
@@ -5845,9 +7541,17 @@ SCF
 \begin_layout Plain Layout
 
 \size small
-SCF driver,
- residual,
- Dyson/Keldysh at one energy 
+SCF driver, residuals (orders 1, 2), final sweep, Dyson/Keldysh at one energy (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+G_at_energy
+\end_layout
+
+\end_inset
+
+)
 \end_layout
 
 \end_inset
@@ -5882,9 +7586,11 @@ Observables
 \begin_layout Plain Layout
 
 \size small
-current,
- spin texture,
- spectral function 
+current, spin texture per orbital and per atom (with 
+\begin_inset Formula $\langle\mathbf{L}\rangle$
+\end_inset
+
+), spectral function
 \end_layout
 
 \end_inset
@@ -5929,13 +7635,11 @@ input.dat
 
 \end_inset
 
-,
- per-site 
+, atoms and orbitals, leads, per-site 
 \begin_inset Formula $U$
 \end_inset
 
-,
- Hamiltonian printout 
+, Hamiltonian printout
 \end_layout
 
 \end_inset
@@ -6118,7 +7822,7 @@ BroydenMixing
 \begin_layout Plain Layout
 
 \size small
-modified Broyden solver 
+modified Broyden solver, optional single-precision history
 \end_layout
 
 \end_inset
@@ -6213,7 +7917,7 @@ read_input
 status collapsed
 
 \begin_layout Plain Layout
-build_helix_hamiltonian
+build_hamiltonian
 \end_layout
 
 \end_inset
@@ -6274,7 +7978,7 @@ broyden_solve
 status collapsed
 
 \begin_layout Plain Layout
-scf_residual
+scf_residual2
 \end_layout
 
 \end_inset
@@ -6310,7 +8014,7 @@ sigma2_compute
 status collapsed
 
 \begin_layout Plain Layout
-interacting_gf
+sweep
 \end_layout
 
 \end_inset
@@ -6324,7 +8028,21 @@ interacting_gf
 \end_inset
 
  
+final 
 \begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sweep
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\to$
+\end_inset
+
+ \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
@@ -6377,10 +8095,7 @@ Naming.
 \end_layout
 
 \begin_layout Standard
-\begin_inset Formula $G_{\text{in}}$
-\end_inset
 
- = 
 \begin_inset Flex Code
 status collapsed
 
@@ -6390,22 +8105,7 @@ G_in
 
 \end_inset
 
- is the input of the current SCF step and 
-\begin_inset Formula $G_{\text{out}}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-G_out
-\end_layout
-
-\end_inset
-
- its output;
- components 
+ (components 
 \begin_inset Flex Code
 status collapsed
 
@@ -6415,19 +8115,7 @@ status collapsed
 
 \end_inset
 
-,
- 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-%a
-\end_layout
-
-\end_inset
-
-,
- 
+, 
 \begin_inset Flex Code
 status collapsed
 
@@ -6437,32 +8125,141 @@ status collapsed
 
 \end_inset
 
-,
- 
+, each 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-%G
+(nA, nA, n_omega)
 \end_layout
 
 \end_inset
 
-,
- each 
+) is the input of the current order-2 SCF step. 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-(Norb,
- Norb,
- n_omega)
+act
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+pos
+\end_layout
+
+\end_inset
+
+: active states and their position; 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+sup
+\end_layout
+
+\end_inset
+
+: support of 
+\begin_inset Formula $\Sigma^{<}$
+\end_inset
+
+; 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+cl
+\end_layout
+
+\end_inset
+
+: left-contact states. Per-energy results of a sweep: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+gRd
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+gLd
+\end_layout
+
+\end_inset
+
+ (diagonals on 
+\begin_inset Formula $A$
+\end_inset
+
+), 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+onsL
+\end_layout
+
+\end_inset
+
+ (on-site blocks of 
+\begin_inset Formula $\Gl$
+\end_inset
+
+), 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+atomL
+\end_layout
+
+\end_inset
+
+ (intra-atom blocks), 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dosd
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+trU
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+trD
 \end_layout
 
 \end_inset
 
 .
 \end_layout
+
 
 \begin_layout Paragraph
 Shared code.
@@ -6712,29 +8509,49 @@ self_energies.f90
 
 \end_inset
 
- for all energies and add it in 
+ on the active block for all energies and add it to 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-sigma_retarded
+w1
 \end_layout
 
 \end_inset
 
- / 
+ (retarded) and 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-sigma_lesser
+SL
 \end_layout
 
 \end_inset
 
-.
- 
+ (lesser) in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+G_at_energy
 \end_layout
+
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/scf.f90
+\end_layout
+
+\end_inset
+
+).
+\end_layout
+
 
 \begin_layout Section
 Testing and validation
@@ -6835,7 +8652,7 @@ TOL_REL
 \begin_layout Standard
 \align center
 \begin_inset Tabular
-<lyxtabular version="3" rows="6" columns="2">
+<lyxtabular version="3" rows="12" columns="2">
 <features booktabs="true" tabularvalignment="middle">
 <column alignment="none" valignment="top" special=">{\ttfamily}l">
 <column alignment="none" valignment="top" width="9.5cm">
@@ -6860,25 +8677,24 @@ what it covers
 </cell>
 </row>
 <row>
-<cell alignment="none" valignment="top" topline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
-order0_noninteracting 
+order0_noninteracting
 \end_layout
 
 \end_inset
 </cell>
-<cell alignment="none" valignment="top" topline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
-4-site helix,
- 
+4-site helix, 
 \begin_inset Formula $U=0$
 \end_inset
 
- 
+
 \end_layout
 
 \end_inset
@@ -6889,7 +8705,7 @@ order0_noninteracting
 \begin_inset Text
 
 \begin_layout Plain Layout
-order1_hartree_fock 
+order1_hartree_fock
 \end_layout
 
 \end_inset
@@ -6902,7 +8718,11 @@ first-order
 \begin_inset Formula $\Sigma$
 \end_inset
 
- 
+ (mixes 
+\begin_inset Formula $\Gl(t{=}0)$
+\end_inset
+
+)
 \end_layout
 
 \end_inset
@@ -6913,7 +8733,7 @@ first-order
 \begin_inset Text
 
 \begin_layout Plain Layout
-order2_second_order 
+order2_second_order
 \end_layout
 
 \end_inset
@@ -6926,8 +8746,7 @@ FFT second-order
 \begin_inset Formula $\Sigma$
 \end_inset
 
-,
- Broyden 
+, Broyden
 \end_layout
 
 \end_inset
@@ -6938,7 +8757,7 @@ FFT second-order
 \begin_inset Text
 
 \begin_layout Plain Layout
-order2_lefthanded_siteU 
+order2_lefthanded_siteU
 \end_layout
 
 \end_inset
@@ -6947,11 +8766,11 @@ order2_lefthanded_siteU
 \begin_inset Text
 
 \begin_layout Plain Layout
+
 \begin_inset Formula $h=-1$
 \end_inset
 
-,
- site-dependent 
+, site-dependent 
 \begin_inset Formula $U$
 \end_inset
 
@@ -6965,23 +8784,87 @@ hubbard_file
 
 \end_inset
 
- 
+ (active subspace smaller than 
+\begin_inset Formula $H$
+\end_inset
+
+)
 \end_layout
 
 \end_inset
 </cell>
 </row>
 <row>
-<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
-legacy_inputSOC 
+order2_from_xyz
 \end_layout
 
 \end_inset
 </cell>
-<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+positions from an 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+.xyz
+\end_layout
+
+\end_inset
+
+ file
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order1_custom_template
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = custom
+\end_layout
+
+\end_inset
+
+ as shipped
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+legacy_inputSOC
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -6995,7 +8878,141 @@ inputSOC.dat
 
 \end_inset
 
- and old key names 
+ and old key names
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order0_dftb_blocks
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DFTB block file (3 atoms of hexahelicene, 9 orbitals), contact atoms
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order2_dftb_blocks
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+the same at order 2, one 
+\begin_inset Formula $U$
+\end_inset
+
+ per orbital
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order2_dftb_hs
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+: Löwdin + spin–orbit, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian_matrix.dat
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+populations_atoms.dat
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error_*
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+must stop with exit code 1: wrong 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_sites
+\end_layout
+
+\end_inset
+
+, unknown model, atom in both leads, missing 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+max_angular_momentum
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \end_inset
@@ -7097,6 +9114,40 @@ SCF_stype
  with interactions.
 \end_layout
 
+\begin_layout Standard
+The active-subspace version (November 2026) reproduces the full-storage version: order-2 SCF histories bit-identical (double-precision history), observables to 
+\begin_inset Formula $10^{-8}$
+\end_inset
+
+, all regression tests unchanged; order 1 reaches the same fixed point (
+\begin_inset Formula $10^{-13}$
+\end_inset
+
+) in about half the steps. The DFTB block reader reproduces the soc_dftb eigenvalues to 
+\begin_inset Formula $3\times10^{-6}$
+\end_inset
+
+ eV, its order-0 current agrees with an independent Landauer calculation to 10 digits, and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+populations_atoms.dat
+\end_layout
+
+\end_inset
+
+ (including 
+\begin_inset Formula $\langle\mathbf{L}\rangle$
+\end_inset
+
+) agrees with an independent NEGF calculation to 
+\begin_inset Formula $4\times10^{-13}$
+\end_inset
+
+.
+\end_layout
+
 \begin_layout Section
 Known limitations
 \end_layout
@@ -7116,10 +9167,9 @@ Perturbation theory in
 \end_layout
 
 \begin_layout Itemize
-Wide-band leads coupled to the two end sites only;
- the bias is applied to the left lead.
- 
+Wide-band leads, diagonal in orbital and spin, on chosen contact atoms; the bias is applied to the left lead.
 \end_layout
+
 
 \begin_layout Itemize
 The energy grid is uniform;
@@ -7186,6 +9236,44 @@ build_hamiltonian_from_xyz
 ) of the helix.
  
 \end_layout
+\begin_layout Itemize
+Multi-orbital Hamiltonians: intra-orbital 
+\begin_inset Formula $U$
+\end_inset
+
+ only (no 
+\begin_inset Formula $U'$
+\end_inset
+
+, 
+\begin_inset Formula $J$
+\end_inset
+
+ or inter-site interaction). 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+ reads real 
+\begin_inset Formula $\Gamma$
+\end_inset
+
+-point matrices with s and p shells (no d shells).
+\end_layout
+
+\begin_layout Itemize
+
+\begin_inset Formula $\langle\mathbf{L}\rangle$
+\end_inset
+
+ is evaluated in the Löwdin orbitals.
+\end_layout
+
 
 \end_body
 \end_document

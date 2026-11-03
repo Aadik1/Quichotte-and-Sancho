@@ -13,6 +13,6 @@ ifdef FFTW_DIR
   INCLUDES = -I$(FFTW_DIR)/include
   LIBS     = -L$(FFTW_DIR)/lib -Wl,-rpath,$(FFTW_DIR)/lib -lfftw3 -lopenblas
 else
-  INCLUDES = $(addprefix -I,$(subst :, ,$(CPATH)))
+  INCLUDES = $(addprefix -I,$(subst :, ,$(CPATH) $(C_INCLUDE_PATH)))	
   LIBS     = -lfftw3 -lopenblas
 endif

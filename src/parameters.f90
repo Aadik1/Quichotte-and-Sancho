@@ -24,7 +24,7 @@ module Parameters
    integer :: order          !...perturbation order in U: 0, 1 or 2
 
    !...which Hamiltonian to build (see build_hamiltonian in hamiltonian.f90)
-   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'xyz', 'dftb', 'dftb_hs' or 'custom'
+   character(len=32)  :: hamiltonian_model = 'helix'   !...'helix', 'peptide', 'xyz', 'dftb', 'dftb_hs' or 'custom'
    character(len=256) :: xyz_file = 'molecule.xyz'     !...positions (xyz); elements (dftb_hs)
    character(len=256) :: ham_file = 'hamiltonian_blocks_fortran.txt'   !...dftb: blocks; dftb_hs: hamsqr1.dat
    character(len=256) :: overlap_file = 'oversqr.dat'  !...(hamiltonian = dftb_hs)
@@ -61,6 +61,14 @@ module Parameters
    real(dp) :: hel_radius    !...helix radius
    real(dp) :: hel_length    !...helix length scale (see helix_coordinate in hamiltonian.f90)
    real(dp) :: hand          !...helicity: +1 right-handed, -1 left-handed
+
+   !...peptide model (hamiltonian = peptide): alpha-helix, one site per residue,
+   !   long-range hopping/SOC decaying with distance (see build_peptide_hamiltonian)
+   real(dp) :: pep_twist     !...twist angle between consecutive sites [deg]   (alpha-helix: 100)
+   real(dp) :: pep_rise      !...rise per site along the helix axis [Angstrom] (alpha-helix: 1.5)
+   integer  :: hop_range     !...site i couples to i+1 .. i+hop_range
+   real(dp) :: hop_decay     !...decay length l_c [Angstrom]: t_j = t_hop*exp(-(l_j - l_1)/l_c)
+   character(len=16) :: soc_model = 'radial'   !...'radial' (Guo-Sun, every bond) or 'torsion' (i,i+2 as helix)
    real(dp) :: GammaL_up, GammaL_down   !...left lead coupling to site 1, per spin [eV]
    real(dp) :: GammaR_both              !...right lead coupling to the last site, both spins [eV]
 

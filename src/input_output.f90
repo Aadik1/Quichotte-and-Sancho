@@ -71,6 +71,12 @@ contains
          call input_get('hel_radius', hel_radius, default=0.d0)
          call input_get('hand', hand, default=1.d0)
       end if
+      !...peptide model (alpha-helix defaults; hel_radius and hand are shared with helix)
+      call input_get('pep_twist', pep_twist, default=100.d0)
+      call input_get('pep_rise', pep_rise, default=1.5d0)
+      call input_get('hop_range', hop_range, default=1)
+      call input_get('hop_decay', hop_decay, default=1.d0)
+      call input_get('soc_model', soc_model, default='radial')
       !...Hamiltonian and interaction
       if (trim(hamiltonian_model) .eq. 'dftb' .or. trim(hamiltonian_model) .eq. 'dftb_hs') then
          call input_get('E_CC', E_CC, default=0.d0)     !...not used: H comes from the DFTB files
@@ -79,8 +85,9 @@ contains
          call input_get('E_CC', E_CC)
          call input_get('t_hop', t_hop)
       end if
-      if (trim(hamiltonian_model) .eq. 'helix' .or. trim(hamiltonian_model) .eq. 'xyz') then
-         call input_get('lamb', lamb)                   !...SOC: helix and xyz models
+      if (trim(hamiltonian_model) .eq. 'helix' .or. trim(hamiltonian_model) .eq. 'xyz' .or. &
+          trim(hamiltonian_model) .eq. 'peptide') then
+         call input_get('lamb', lamb)                   !...SOC: helix, xyz and peptide models
       else
          call input_get('lamb', lamb, default=0.d0)     !...available to your model if you want it
       end if
@@ -393,6 +400,15 @@ contains
       if (trim(hamiltonian_model) .eq. 'helix' .and. (N_ions .lt. 2 .or. N_turns .lt. 1)) &
          call complain('need N_ions >= 2 and N_turns >= 1')
       if (N_sites .lt. 1) call complain('need at least one site')
+      if (trim(hamiltonian_model) .eq. 'peptide') then
+         if (N_sites .lt. 2) call complain('peptide: need N_sites >= 2')
+         if (hel_radius .le. 0.d0) call complain('peptide: hel_radius must be > 0 (alpha-helix: 2.5)')
+         if (abs(abs(hand) - 1.d0) .gt. 1.d-12) call complain('peptide: hand must be +1 or -1')
+         if (hop_range .lt. 1) call complain('peptide: hop_range must be >= 1')
+         if (hop_decay .le. 0.d0) call complain('peptide: hop_decay must be > 0')
+         if (trim(soc_model) .ne. 'radial' .and. trim(soc_model) .ne. 'torsion') &
+            call complain('peptide: soc_model must be radial or torsion')
+      end if
       if (order .lt. 0 .or. order .gt. 2) call complain('order must be 0, 1 or 2')
       if (delta .le. 0.d0) call complain('delta (energy grid step) must be > 0')
       if (delv .le. 0.d0) call complain('delv (voltage step) must be > 0')

@@ -5,6 +5,7 @@
 ! chooses the model; build_hamiltonian (below) calls the matching routine:
 !
 !   helix   build_helix_hamiltonian       helical molecule with SOC (default)
+!   peptide build_peptide_hamiltonian     alpha-helix, one site per residue, long-range hopping + SOC
 !   xyz     build_hamiltonian_from_xyz    same terms, site positions from xyz_file
 !   dftb    build_hamiltonian_from_dftb   matrix read from ham_file (soc_dftb block format)
 !   dftb_hs build_hamiltonian_from_dftb_hs  H0 and S from DFTB+ (hamsqr1.dat, oversqr.dat),
@@ -44,6 +45,8 @@ contains
       select case (trim(hamiltonian_model))
       case ('helix')
          call build_helix_hamiltonian()
+      case ('peptide')
+         call build_peptide_hamiltonian()
       case ('xyz')
          call build_hamiltonian_from_xyz(trim(xyz_file))
       case ('dftb')
@@ -54,7 +57,7 @@ contains
          call build_custom_hamiltonian()
       case default
          print *, 'ERROR: unknown hamiltonian = ', trim(hamiltonian_model)
-         print *, '       built in: helix, xyz, dftb, dftb_hs, custom (see src/hamiltonian.f90)'
+         print *, '       built in: helix, peptide, xyz, dftb, dftb_hs, custom (see src/hamiltonian.f90)'
          stop 1
       end select
    end subroutine build_hamiltonian
@@ -158,6 +161,105 @@ contains
 
       call make_hermitian()
    end subroutine build_helix_hamiltonian
+
+   !===========================================================================
+   ! PEPTIDE MODEL  (input: hamiltonian = peptide, N_sites = ...)
+   !
+   ! alpha-helical peptide, one site per residue (after Guo & Sun, PNAS 111,
+   ! 11658 (2014)). Unlike 'helix', the twist need not divide 2*pi (3.6 sites/turn):
+   !   r_i   = ( R cos phi_i, R sin phi_i, (i-1)*pep_rise ),  phi_i = hand*(i-1)*pep_twist
+   !   H     = sum_i E_CC n_i
+   !         + sum_i sum_{j=1..hop_range} t_j  c+_i c_{i+j}  (+ h.c., spin diagonal)
+   !         + SOC, soc_model:
+   !             radial : sum_i sum_{j=1..hop_range} i*lamb_j c+_i (nu_{i,i+j}.sigma) c_{i+j} + h.c.
+   !             torsion: i*lamb sum_<i,i+2> (d_{i,i+1} x d_{i,i+2}).sigma  (exactly as 'helix')
+   !   t_j    = t_hop exp(-(l - l_1)/hop_decay),  lamb_j = lamb exp(-(l - l_1)/hop_decay)
+   !   l      = |r_{i+j} - r_i|, l_1 the nearest-neighbour distance (t_1 = t_hop, lamb_1 = lamb)
+   !   nu     = rhat(phibar) x dhat, phibar = (phi_i + phi_{i+j})/2: radial (confining) field
+   !            x bond direction = Guo-Sun's (sin phibar sin th, -cos phibar sin th, cos th).
+   !            Their sigma_i + sigma_{i+j} convention means their s_j = lamb_j/2.
+   !            phibar is used, not the chord midpoint: for j = 2 (200 deg) the chord
+   !            midpoint lies on the far side of the axis and would flip the sign.
+   ! alpha-helix: hel_radius = 2.5, pep_twist = 100 (default), pep_rise = 1.5 (default)
+   !   -> l_1..l_4 = 4.11, 5.77, 5.15, 6.24 A (note l_3 < l_2).
+   ! Writes peptide_geometry.xyz and prints l_j and t_j/t_hop.
+   !===========================================================================
+   subroutine build_peptide_hamiltonian()
+      implicit none
+      integer :: i, j, m, ii, jj, Nat, u, jmax
+      real(dp) :: dphi, l1, l, fac, lj, phibar
+      real(dp) :: d(3), dhat(3), rhat(3), nu(3)
+      real(dp), allocatable :: rs(:, :), phi(:)
+
+      Nat = Norb/2
+      jmax = min(hop_range, Nat - 1)
+      dphi = hand*pep_twist*pi/180.d0
+      allocate (rs(3, Nat), phi(Nat))
+      do i = 1, Nat
+         phi(i) = (i - 1)*dphi
+         rs(:, i) = [hel_radius*cos(phi(i)), hel_radius*sin(phi(i)), (i - 1)*pep_rise]
+      end do
+      l1 = norm3(rs(:, 2) - rs(:, 1))
+
+      H = (0.0d0, 0.0d0)
+
+      !...on-site
+      do i = 1, Nat
+         ii = 2*i
+         H(ii - 1, ii - 1) = E_CC
+         H(ii, ii) = E_CC
+      end do
+
+      !...torsion SOC first: soc_matrix_elements ASSIGNS its block, the terms below ADD
+      if (trim(soc_model) .eq. 'torsion') then
+         do i = 1, Nat - 2
+            call soc_matrix_elements(rs(:, i), rs(:, i + 1), rs(:, i + 2), 2*i, 2*(i + 2))
+         end do
+      end if
+
+      !...long-range hopping (and radial SOC) on every bond (i, i+j), j <= hop_range
+      do j = 1, jmax
+         do i = 1, Nat - j
+            m = i + j; ii = 2*i; jj = 2*m
+            d = rs(:, m) - rs(:, i); l = norm3(d); dhat = d/l
+            fac = exp(-(l - l1)/hop_decay)
+
+            H(ii - 1, jj - 1) = H(ii - 1, jj - 1) + t_hop*fac
+            H(ii, jj) = H(ii, jj) + t_hop*fac
+
+            if (trim(soc_model) .eq. 'radial') then
+               phibar = 0.5d0*(phi(i) + phi(m))
+               rhat = [cos(phibar), sin(phibar), 0.d0]
+               call cross_product(rhat, dhat, nu)
+               lj = lamb*fac
+               H(ii - 1, jj - 1) = H(ii - 1, jj - 1) + im*lj*nu(3)
+               H(ii - 1, jj) = H(ii - 1, jj) + im*lj*(nu(1) - im*nu(2))
+               H(ii, jj - 1) = H(ii, jj - 1) + im*lj*(nu(1) + im*nu(2))
+               H(ii, jj) = H(ii, jj) - im*lj*nu(3)
+            end if
+         end do
+      end do
+
+      call make_hermitian()
+
+      !...geometry (loadable by hamiltonian = xyz) and the hopping table
+      open (newunit=u, file='peptide_geometry.xyz', status='replace')
+      write (u, '(i0)') Nat
+      write (u, '(a)') 'QUICHOTTE peptide sites [Angstrom]'
+      do i = 1, Nat
+         write (u, '(a,3f14.8)') 'C ', rs(:, i)
+      end do
+      close (u)
+      write (*, '(a,f7.2,a,f6.3,a,f6.3,a,f5.1,a,a)') ' Peptide helix: twist', pep_twist, ' deg, rise', &
+         pep_rise, ' A, radius', hel_radius, ' A, hand', hand, ', SOC ', trim(soc_model)
+      write (*, '(a,f6.3,a)') '    j    l_j [A]    t_j/t_hop     (hop_decay =', hop_decay, ' A)'
+      do j = 1, jmax
+         l = norm3(rs(:, 1 + j) - rs(:, 1))
+         write (*, '(i5,f11.4,es14.4)') j, l, exp(-(l - l1)/hop_decay)
+      end do
+      call report_time_reversal()
+      deallocate (rs, phi)
+   end subroutine build_peptide_hamiltonian
 
    subroutine build_hamiltonian_from_xyz(xyz_path)
       !...Same model as build_helix_hamiltonian, but site positions are read from an

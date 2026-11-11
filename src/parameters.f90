@@ -69,6 +69,7 @@ module Parameters
    integer  :: hop_range     !...site i couples to i+1 .. i+hop_range
    real(dp) :: hop_decay     !...decay length l_c [Angstrom]: t_j = t_hop*exp(-(l_j - l_1)/l_c)
    character(len=16) :: soc_model = 'radial'   !...'radial' (Guo-Sun, every bond) or 'torsion' (i,i+2 as helix)
+   real(dp) :: dipole_ramp   !...helix dipole as a linear on-site ramp [eV]: eps_N - eps_1 (0 = no dipole)
    real(dp) :: GammaL_up, GammaL_down   !...left lead coupling to site 1, per spin [eV]
    real(dp) :: GammaR_both              !...right lead coupling to the last site, both spins [eV]
 

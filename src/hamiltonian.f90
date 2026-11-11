@@ -165,23 +165,31 @@ contains
    !===========================================================================
    ! PEPTIDE MODEL  (input: hamiltonian = peptide, N_sites = ...)
    !
-   ! alpha-helical peptide, one site per residue (after Guo & Sun, PNAS 111,
-   ! 11658 (2014)). Unlike 'helix', the twist need not divide 2*pi (3.6 sites/turn):
-   !   r_i   = ( R cos phi_i, R sin phi_i, (i-1)*pep_rise ),  phi_i = hand*(i-1)*pep_twist
-   !   H     = sum_i E_CC n_i
-   !         + sum_i sum_{j=1..hop_range} t_j  c+_i c_{i+j}  (+ h.c., spin diagonal)
-   !         + SOC, soc_model:
-   !             radial : sum_i sum_{j=1..hop_range} i*lamb_j c+_i (nu_{i,i+j}.sigma) c_{i+j} + h.c.
-   !             torsion: i*lamb sum_<i,i+2> (d_{i,i+1} x d_{i,i+2}).sigma  (exactly as 'helix')
-   !   t_j    = t_hop exp(-(l - l_1)/hop_decay),  lamb_j = lamb exp(-(l - l_1)/hop_decay)
-   !   l      = |r_{i+j} - r_i|, l_1 the nearest-neighbour distance (t_1 = t_hop, lamb_1 = lamb)
-   !   nu     = rhat(phibar) x dhat, phibar = (phi_i + phi_{i+j})/2: radial (confining) field
-   !            x bond direction = Guo-Sun's (sin phibar sin th, -cos phibar sin th, cos th).
-   !            Their sigma_i + sigma_{i+j} convention means their s_j = lamb_j/2.
-   !            phibar is used, not the chord midpoint: for j = 2 (200 deg) the chord
-   !            midpoint lies on the far side of the axis and would flip the sign.
-   ! alpha-helix: hel_radius = 2.5, pep_twist = 100 (default), pep_rise = 1.5 (default)
-   !   -> l_1..l_4 = 4.11, 5.77, 5.15, 6.24 A (note l_3 < l_2).
+   ! alpha-helical peptide, one site per residue: Guo & Sun, PNAS 111, 11658 (2014),
+   ! Eqs. 2-3. Unlike 'helix', the twist need not divide 2*pi (3.6 sites/turn):
+   !   r_n   = ( R cos phi_n, R sin phi_n, (n-1)*pep_rise ),  phi_n = n*dphi,
+   !           dphi = hand*pep_twist                                 (paper: phi_n = n dphi)
+   !   H_mol = sum_n eps_n n_n + sum_n sum_{j=1..hop_range} t_j c+_n c_{n+j} + h.c.    (Eq. 2)
+   !   eps_n = E_CC + dipole_ramp*((n-1)/(N-1) - 1/2): helix macrodipole as a linear
+   !           on-site ramp (not in Guo-Sun), spin independent, mean E_CC.
+   !           dipole_ramp > 0: on-site energy rises from site 1 (left lead) to site N.
+   !           dipole_ramp = 0 gives exactly the Guo-Sun H_mol.
+   !   H_so, soc_model:
+   !     radial : sum_n sum_{j=1..hop_range} 2 i s_j cos(phi-_nj) c+_n (nu_nj.sigma) c_{n+j} + h.c.  (Eq. 3)
+   !     torsion: i*lamb sum_<n,n+2> (d_{n,n+1} x d_{n,n+2}).sigma   (exactly as 'helix')
+   !   t_j = t_hop exp(-(l_j - l_1)/hop_decay),  s_j = lamb exp(-(l_j - l_1)/hop_decay)
+   !   l_j = |r_{n+j} - r_n| = sqrt[(2R sin(j dphi/2))^2 + (j pep_rise)^2]
+   !   so t_hop = paper t_1, lamb = paper s_1 (renormalised NN SOC; paper uses s_1 = 0.12 t_1)
+   !   phi+-_nj = (phi_{n+j} +- phi_n)/2;  cos(phi-_nj) = cos(j dphi/2) changes sign with j
+   !            (j = 2, 3, 4 have the opposite sign to j = 1 for the alpha-helix)
+   !   nu_nj = rhat(phi+_nj) x dhat_nj  (radial direction x bond direction)
+   !         = (sin phi+ sin th_j, -cos phi+ sin th_j, cos th_j) = the paper's sigma_nj, with
+   !         th_j = arccos[2R sin(j dphi/2)/l_j] (> 90 deg when sin(j dphi/2) < 0, e.g. j = 4).
+   !         phi+ is used, not the chord midpoint: for j = 2 (200 deg) the chord midpoint
+   !         lies on the far side of the axis and would flip the sign.
+   ! alpha-helix (paper Table 1): hel_radius = 2.5, pep_twist = 100, pep_rise = 1.5
+   !   -> l_1..l_4 = 4.11, 5.77, 5.15, 6.24 A (note l_3 < l_2). The paper keeps every j
+   !   (hop_range = N_sites - 1); with hop_decay = 0.9 terms beyond j = 4 are < 1% of t_1.
    ! Writes peptide_geometry.xyz and prints l_j and t_j/t_hop.
    !===========================================================================
    subroutine build_peptide_hamiltonian()
@@ -196,18 +204,19 @@ contains
       dphi = hand*pep_twist*pi/180.d0
       allocate (rs(3, Nat), phi(Nat))
       do i = 1, Nat
-         phi(i) = (i - 1)*dphi
+         phi(i) = i*dphi                    !...phi_n = n*dphi exactly as Guo-Sun
          rs(:, i) = [hel_radius*cos(phi(i)), hel_radius*sin(phi(i)), (i - 1)*pep_rise]
       end do
       l1 = norm3(rs(:, 2) - rs(:, 1))
 
       H = (0.0d0, 0.0d0)
 
-      !...on-site
+      !...on-site: E_CC plus the helix dipole as a linear ramp, centred so the mean is E_CC
+      !   eps_n = E_CC + dipole_ramp*((n-1)/(N-1) - 1/2)   (eps_N - eps_1 = dipole_ramp)
       do i = 1, Nat
          ii = 2*i
-         H(ii - 1, ii - 1) = E_CC
-         H(ii, ii) = E_CC
+         H(ii - 1, ii - 1) = E_CC + dipole_ramp*(dble(i - 1)/dble(Nat - 1) - 0.5d0)
+         H(ii, ii) = H(ii - 1, ii - 1)
       end do
 
       !...torsion SOC first: soc_matrix_elements ASSIGNS its block, the terms below ADD
@@ -231,7 +240,7 @@ contains
                phibar = 0.5d0*(phi(i) + phi(m))
                rhat = [cos(phibar), sin(phibar), 0.d0]
                call cross_product(rhat, dhat, nu)
-               lj = lamb*fac
+               lj = 2.d0*lamb*fac*cos(0.5d0*(phi(m) - phi(i)))   !...2 s_j cos(phi-_nj), Eq. 3
                H(ii - 1, jj - 1) = H(ii - 1, jj - 1) + im*lj*nu(3)
                H(ii - 1, jj) = H(ii - 1, jj) + im*lj*(nu(1) - im*nu(2))
                H(ii, jj - 1) = H(ii, jj - 1) + im*lj*(nu(1) + im*nu(2))
@@ -252,6 +261,8 @@ contains
       close (u)
       write (*, '(a,f7.2,a,f6.3,a,f6.3,a,f5.1,a,a)') ' Peptide helix: twist', pep_twist, ' deg, rise', &
          pep_rise, ' A, radius', hel_radius, ' A, hand', hand, ', SOC ', trim(soc_model)
+      write (*, '(a,f9.5,a,f9.5,a,f9.5,a)') ' Dipole ramp:', dipole_ramp, ' eV  (eps_1 =', &
+         real(H(1, 1)), ', eps_N =', real(H(Norb, Norb)), ' eV)'
       write (*, '(a,f6.3,a)') '    j    l_j [A]    t_j/t_hop     (hop_decay =', hop_decay, ' A)'
       do j = 1, jmax
          l = norm3(rs(:, 1 + j) - rs(:, 1))

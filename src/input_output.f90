@@ -77,6 +77,7 @@ contains
       call input_get('hop_range', hop_range, default=1)
       call input_get('hop_decay', hop_decay, default=1.d0)
       call input_get('soc_model', soc_model, default='radial')
+      call input_get('dipole_ramp', dipole_ramp, default=0.d0)
       !...Hamiltonian and interaction
       if (trim(hamiltonian_model) .eq. 'dftb' .or. trim(hamiltonian_model) .eq. 'dftb_hs') then
          call input_get('E_CC', E_CC, default=0.d0)     !...not used: H comes from the DFTB files

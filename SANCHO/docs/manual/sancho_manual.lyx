@@ -172,31 +172,33 @@ maketitle
 \end_layout
 
 \begin_layout Abstract
-SANCHO computes the current–voltage characteristics of a tight-binding chain with an on-site Hubbard interaction,
- coupled to two leads.
- It uses self-consistent non-equilibrium Green's functions (NEGF),
- with the interaction treated to zeroth,
- first (Hartree–Fock),
- second or third order in
+In the meantime QUICHOTTE worked upon a neighbour of its own, an honest code (if indeed that title can be given to one that does not resolve spin), but with very little memory in its pate. In a word, it so talked it over, with such persuasions and promises, that the poor routine made up its mind to sally forth with it and serve as its squire. Its name was SANCHO, and it set out upon a humble chain, though nothing obliges it to keep to one.
+\end_layout
+
+\begin_layout Abstract
+SANCHO computes the steady-state current–voltage characteristics of an interacting region coupled to two leads: any spin-independent single-particle Hamiltonian with an on-site Hubbard interaction
 \begin_inset space ~
 \end_inset
-
 
 \begin_inset Formula $U$
 \end_inset
 
-.
- Spin is not resolved:
- the chain is paramagnetic and the current carries a factor of two for spin.
- Unlike QUICHOTTE,
- which evaluates the second order by FFT,
- SANCHO evaluates every order through factorised particle–hole and particle–particle 
+, by self-consistent non-equilibrium Green's functions (NEGF). The interaction enters only through the self-energy, to zeroth, first (Hartree), second or third order in
+\begin_inset space ~
+\end_inset
+
+\begin_inset Formula $U$
+\end_inset
+
+. Spin is not resolved: the solution is assumed paramagnetic, the Green's functions are those of one spin species, and the current carries a factor of two for spin. Unlike QUICHOTTE, which evaluates the second order by FFT, SANCHO builds every order from factorised particle–hole and particle–particle 
 \emph on
 bubbles
 \emph default
-,
- which is what makes the third order affordable.
- SANCHO lives in the 
+, which is what makes the third order affordable.
+\end_layout
+
+\begin_layout Abstract
+The Hamiltonian is chosen with a single input key, and nothing else in the code depends on it: the built-in model is a nearest-neighbour chain, and a model of your own needs only one short routine. SANCHO lives in the 
 \begin_inset Flex Code
 status collapsed
 
@@ -206,10 +208,7 @@ SANCHO/
 
 \end_inset
 
- folder of the QUICHOTTE repository but is a complete,
- independent code with its own build,
- tests and examples.
- 
+ folder of the QUICHOTTE repository but is a complete, independent code with its own build, tests and examples. This manual sets down the equations it solves, the numerical methods, how to run it and how to give it a Hamiltonian of your own, and a complete reference for the input and output files.
 \end_layout
 
 \begin_layout Standard
@@ -230,6 +229,10 @@ Quick start
 \end_layout
 
 \begin_layout Verbatim
+git clone https://github.com/Aadik1/Quichotte-and-Sancho.git QUICHOTTE   # if not done yet
+\end_layout
+
+\begin_layout Verbatim
 cd QUICHOTTE/SANCHO
 \end_layout
 
@@ -238,7 +241,7 @@ make            # builds bin/sancho.x (needs gfortran + BLAS/LAPACK)
 \end_layout
 
 \begin_layout Verbatim
-make test       # 6 regression tests,
+make test       # 8 regression tests,
  ~10 s;
  all must PASS
 \end_layout
@@ -528,6 +531,62 @@ Model
 \end_layout
 
 \begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:model"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+SANCHO computes steady-state transport through an interacting region coupled to two leads, without resolving spin. This section defines that problem in general: the Hamiltonian (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:hamiltonian"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+) and the leads (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:leads"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:chain"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ then describes the chain that comes with the code.
+\end_layout
+
+\begin_layout Standard
 Units:
  energies in eV,
  voltages in V,
@@ -552,12 +611,416 @@ Units:
 eV/K.
 \end_layout
 
+\begin_layout Standard
+The notation follows Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Chs. 4, 7 and 10"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, and the equations below are written in its conventions: 
+\begin_inset Formula $\omega$
+\end_inset
+
+ is a frequency and 
+\begin_inset Formula $\hbar\omega$
+\end_inset
+
+ the corresponding energy; Fourier transforms are 
+\begin_inset Formula $G(\omega)=\int dt\,e^{i\omega t}G(t)$
+\end_inset
+
+ and 
+\begin_inset Formula $G(t)=\int\frac{d\omega}{2\pi}\,e^{-i\omega t}G(\omega)$
+\end_inset
+
+; the lesser and greater functions are 
+\begin_inset Formula $G_{ab}^{<}(t,t')=\frac{i}{\hbar}\langle c_{b}^{\dagger}(t')c_{a}(t)\rangle$
+\end_inset
+
+ and 
+\begin_inset Formula $G_{ab}^{>}(t,t')=-\frac{i}{\hbar}\langle c_{a}(t)c_{b}^{\dagger}(t')\rangle$
+\end_inset
+
+; and the electron charge is 
+\begin_inset Formula $-e$
+\end_inset
+
+ (
+\begin_inset Formula $e>0$
+\end_inset
+
+). In the code 
+\begin_inset Formula $\hbar=e=1$
+\end_inset
+
+, so 
+\begin_inset Formula $\omega$
+\end_inset
+
+ and 
+\begin_inset Formula $\hbar\omega$
+\end_inset
+
+, and 
+\begin_inset Formula $V$
+\end_inset
+
+ and 
+\begin_inset Formula $eV$
+\end_inset
+
+, are the same numbers.
+\end_layout
+
+
 \begin_layout Subsection
 Hamiltonian
 \end_layout
 
 \begin_layout Standard
-A chain of 
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:hamiltonian"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+SANCHO treats a central region of 
+\begin_inset Formula $N$
+\end_inset
+
+ sites (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_sites
+\end_layout
+
+\end_inset
+
+), one orbital per site, with the Hamiltonian 
+\begin_inset Formula 
+\begin{equation}
+H=\sum_{ij}\sum_{\sigma}h_{ij}\,c_{i\sigma}^{\dagger}c_{j\sigma}+\sum_{i}U_{i}\,n_{i\uparrow}n_{i\downarrow},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $h$
+\end_inset
+
+ is any Hermitian 
+\begin_inset Formula $N\times N$
+\end_inset
+
+ matrix, the same for both spins (the array 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+H
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+). Nothing else in the code (Green's functions, bubbles, self-energies, self-consistency, observables) depends on its form. The input key 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian
+\end_layout
+
+\end_inset
+
+ chooses the routine that fills it: the built-in chain (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:chain"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+), or one of your own (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The Hubbard term is never put into 
+\begin_inset Formula $h$
+\end_inset
+
+: it enters only through the interaction self-energy, to the order set by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order
+\end_layout
+
+\end_inset
+
+. 
+\begin_inset Formula $U_{i}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+U_int
+\end_layout
+
+\end_inset
+
+ on every site, or one value per site from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Leads
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:leads"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Wide-band leads
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.3.8"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+:
+ 
+\begin_inset Formula $\Gamma_{L}$
+\end_inset
+
+ couples to site 1,
+ 
+\begin_inset Formula $\Gamma_{R}$
+\end_inset
+
+ to site 
+\begin_inset Formula $N$
+\end_inset
+
+ (
+\begin_inset Formula $\Gamma_{L}/\hbar$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL
+\end_layout
+
+\end_inset
+
+,
+ 
+\begin_inset Formula $\Gamma_{R}/\hbar$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaR
+\end_layout
+
+\end_inset
+
+,
+ default 1
+\begin_inset space ~
+\end_inset
+
+eV each).
+ Here 
+\begin_inset Formula $\Gamma_{L,R}$
+\end_inset
+
+ are the level widths of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eq. (10.33)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, which carry a factor 
+\begin_inset Formula $\hbar$
+\end_inset
+
+, so the input values are 
+\begin_inset Formula $\Gamma/\hbar$
+\end_inset
+
+, in eV; the retarded lead self-energy is 
+\begin_inset Formula $-\frac{i}{2\hbar}(\Gamma_{L}+\Gamma_{R})$
+\end_inset
+
+.
+ The bias is applied to the left lead only:
+ 
+\begin_inset Formula 
+\begin{equation}
+f_{L}(\omega)=n_{F}(\hbar\omega+eV),\qquad f_{R}(\omega)=n_{F}(\hbar\omega),\qquad n_{F}(\epsilon)=\frac{1}{e^{\beta(\epsilon-\mu)}+1},
+\end{equation}
+
+\end_inset
+
+i.e.
+\begin_inset space \space{}
+\end_inset
+
+
+\begin_inset Formula $\mu_{L}=\mu-eV$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\mu_{R}=\mu$
+\end_inset
+
+, as in Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eq. (10.37)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, where 
+\begin_inset Formula $\omega_{L}=\omega+eV/\hbar$
+\end_inset
+
+.
+ With 
+\begin_inset Formula $U\neq0$
+\end_inset
+
+ the asymmetric bias makes the 
+\begin_inset Formula $I$
+\end_inset
+
+–
+\begin_inset Formula $V$
+\end_inset
+
+ curve not exactly odd in 
+\begin_inset Formula $V$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Built-in Hamiltonian: the chain
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:chain"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The default model (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = chain
+\end_layout
+
+\end_inset
+
+) is a nearest-neighbour chain. It was written for studies of correlated transport through Hubbard chains and is kept as a tested, documented example of what SANCHO can be given.
+\end_layout
+
+\begin_layout Standard
+It has 
 \begin_inset Formula $N$
 \end_inset
 
@@ -666,109 +1129,55 @@ src/hamiltonian.f90
 \end_layout
 
 \begin_layout Standard
-This chain is only one choice: nothing else in the code depends on it, and any other spin-independent single-particle Hamiltonian can be used instead, as described in the section 
-\emph on
-Using your own Hamiltonian
-\emph default
-.
-\end_layout
-
-
-\begin_layout Subsection
-Leads
-\end_layout
-
-\begin_layout Standard
-Wide-band leads:
- 
-\begin_inset Formula $\Gamma_{L}$
-\end_inset
-
- couples to site 1,
- 
-\begin_inset Formula $\Gamma_{R}$
-\end_inset
-
- to site 
-\begin_inset Formula $N$
-\end_inset
-
- (
-\begin_inset Formula $\Gamma_{L}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaL
-\end_layout
-
-\end_inset
-
-,
- 
-\begin_inset Formula $\Gamma_{R}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaR
-\end_layout
-
-\end_inset
-
-,
- default 1
+Ref.
 \begin_inset space ~
 \end_inset
 
-eV each).
- The bias is applied to the left lead only:
- 
-\begin_inset Formula 
-\begin{equation}
-f_{L}(\omega)=\frac{1}{e^{\beta(\omega-\mu+V)}+1},\qquad f_{R}(\omega)=\frac{1}{e^{\beta(\omega-\mu)}+1},
-\end{equation}
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sects. 10.3.8 and 10.5.3"
+key "kantorovich"
+literal "false"
 
 \end_inset
 
-i.e.
-\begin_inset space \space{}
+ uses the same chain but writes the hopping as 
+\begin_inset Formula $-t_{\text{hop}}$
 \end_inset
 
+; here 
+\begin_inset Flex Code
+status collapsed
 
-\begin_inset Formula $\mu_{L}=\mu-V$
-\end_inset
-
-,
- 
-\begin_inset Formula $\mu_{R}=\mu$
-\end_inset
-
-.
- With 
-\begin_inset Formula $U\neq0$
-\end_inset
-
- the asymmetric bias makes the 
-\begin_inset Formula $I$
-\end_inset
-
-–
-\begin_inset Formula $V$
-\end_inset
-
- curve not exactly odd in 
-\begin_inset Formula $V$
-\end_inset
-
-.
+\begin_layout Plain Layout
+t_hop
 \end_layout
+
+\end_inset
+
+ enters with a plus sign, so his 
+\begin_inset Formula $t_{\text{hop}}=2$
+\end_inset
+
+ eV corresponds to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+ = 
+\begin_inset Formula $-2$
+\end_inset
+
+ eV.
+\end_layout
+
+
+
 
 \begin_layout Section
 Non-equilibrium Green's functions
@@ -781,13 +1190,56 @@ Energy grid
 \begin_layout Standard
 \begin_inset Formula 
 \begin{equation}
-\omega_{k}=\omega_{\text{init}}+k\delta,\quad k=1,\dots,N_{\omega},\qquad\omega_{\text{init}}=\epsilon_{\text{min}}-\code{dw},\qquad N_{\omega}=\Bigl\lfloor\frac{\epsilon_{\text{max}}+\code{up}-\omega_{\text{init}}}{\delta}\Bigr\rfloor.
+\hbar\omega_{k}=\hbar\omega_{\text{init}}+k\delta,\quad k=1,\dots,N_{\omega},\qquad\hbar\omega_{\text{init}}=\epsilon_{\text{min}}-\code{dw},\qquad N_{\omega}=\Bigl\lfloor\frac{\epsilon_{\text{max}}+\code{up}-\hbar\omega_{\text{init}}}{\delta}\Bigr\rfloor.
 \end{equation}
 
 \end_inset
 
 
 \end_layout
+
+\begin_layout Standard
+The step 
+\begin_inset Formula $\delta$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+delta
+\end_layout
+
+\end_inset
+
+) is an energy; the corresponding frequency step is 
+\begin_inset Formula $\Delta\omega=\delta/\hbar$
+\end_inset
+
+, so every frequency integral 
+\begin_inset Formula $\int\frac{d\omega}{2\pi}$
+\end_inset
+
+ of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ becomes 
+\begin_inset Formula $\frac{\Delta\omega}{2\pi}\sum_{k}$
+\end_inset
+
+ on the grid.
+\end_layout
+
 
 \begin_layout Subsection
 Dyson and Keldysh equations
@@ -806,6 +1258,35 @@ Dyson and Keldysh equations
 
 \end_layout
 
+\begin_layout Standard
+These are Eqs. (10.130)–(10.132) and (10.142) of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ with the wide-band embedding self-energies; because the interaction self-energy has an imaginary part at every frequency, the extra term of the full Keldysh equation vanishes (Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.5.1"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+).
+\end_layout
+
+
 \begin_layout Subsection
 Occupations and current
 \end_layout
@@ -813,7 +1294,7 @@ Occupations and current
 \begin_layout Standard
 \begin_inset Formula 
 \begin{equation}
-\Gl_{ii}(t{=}0)=\frac{\delta}{2\pi}\sum_{k}\Gl_{ii}(\omega_{k}),\qquad n_{i}=-i\hbar\,\Gl_{ii}(t{=}0)\ \ \text{(per spin)},
+\Gl_{ii}(t{=}0)=\int\!\frac{d\omega}{2\pi}\,\Gl_{ii}(\omega)\simeq\frac{\Delta\omega}{2\pi}\sum_{k}\Gl_{ii}(\omega_{k}),\qquad n_{i}=-i\hbar\,\Gl_{ii}(t{=}0)\ \ \text{(per spin)},
 \end{equation}
 
 \end_inset
@@ -821,7 +1302,7 @@ Occupations and current
 
 \begin_inset Formula 
 \begin{equation}
-J=2\cdot\frac{1}{\hbar}\frac{\delta}{2\pi}\sum_{k}\operatorname{Re}\Tr\Bigl\{ i\Gamma_{L}\Bigl[\bigl(f_{L}-1\bigr)\Gl(\omega_{k})-f_{L}\Gg(\omega_{k})\Bigr]\Bigr\},
+J=2\cdot\frac{1}{\hbar}\frac{\Delta\omega}{2\pi}\sum_{k}\operatorname{Re}\Tr\Bigl\{ i\Gamma_{L}\Bigl[\bigl(f_{L}-1\bigr)\Gl(\omega_{k})-f_{L}\Gg(\omega_{k})\Bigr]\Bigr\},
 \end{equation}
 
 \end_inset
@@ -831,8 +1312,39 @@ where the factor 2 is the spin degeneracy.
 \begin_inset Formula $-[\Gl+f_{L}(\Gr-\Ga)]$
 \end_inset
 
-,
- so this is minus the Meir–Wingreen expression;
+, so 
+\begin_inset Formula $J$
+\end_inset
+
+ is the electron flux into the left lead, 
+\begin_inset Formula $J_{L}=\dot{N}_{L}$
+\end_inset
+
+, of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eqs. (10.137), (10.139)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, i.e. minus the Meir–Wingreen expression
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "meir"
+literal "false"
+
+\end_inset
+
+;
  with this sign 
 \begin_inset Formula $J>0$
 \end_inset
@@ -876,11 +1388,96 @@ interacting_gf
 
 ).
  Grid sums carry the weight 
-\begin_inset Formula $p=\delta/2\pi$
+\begin_inset Formula $p=\Delta\omega/2\pi$
 \end_inset
 
 .
 \end_layout
+
+\begin_layout Standard
+The diagrams are those of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 8.3, Fig. 8.1"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ in the Hubbard limit, projected onto real times with the Langreth rules (Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 7.5"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+); evaluated with the self-consistent 
+\begin_inset Formula $G$
+\end_inset
+
+, orders 1 and 2 form the self-consistent second Born approximation of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.5.3"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+. The first order is the Hartree diagram plus the same-spin Fock diagram of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eqs. (8.20), (8.21)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, which cancels half of it; the second-order prefactor 
+\begin_inset Formula $c_{2}=-(i\hbar)^{2}$
+\end_inset
+
+ is the sum of diagrams (c) and (d) of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 8.3.2"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+. The third order goes beyond the diagrams worked out in Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+.
+\end_layout
+
 
 \begin_layout Subsection
 First order (Hartree),
@@ -954,7 +1551,7 @@ compute_bubbles
 Particle–hole bubbles
 \emph default
  at transfer 
-\begin_inset Formula $\nu_{m}=m\delta$
+\begin_inset Formula $\hbar\nu_{m}=m\delta$
 \end_inset
 
 ,
@@ -979,7 +1576,7 @@ Particle–hole bubbles
 Particle–particle bubbles
 \emph default
  (order 3 only) at total energy 
-\begin_inset Formula $\Omega_{n}=2\omega_{\text{init}}+n\delta$
+\begin_inset Formula $\hbar\Omega_{n}=2\hbar\omega_{\text{init}}+n\delta$
 \end_inset
 
 ,
@@ -1276,20 +1873,19 @@ common/scf_checks.f90
 \begin_inset Formula $F=0$
 \end_inset
 
- is solved by Johnson's modified Broyden mixing (Phys.
-\begin_inset space \space{}
+ is solved by Johnson's modified Broyden mixing
+\begin_inset space ~
 \end_inset
 
-Rev.
-\begin_inset space \space{}
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "johnson"
+literal "false"
+
 \end_inset
 
-B 
-\series bold
-38
-\series default
 ,
- 12807 (1988)),
  with weight 
 \begin_inset Flex Code
 status collapsed
@@ -1369,7 +1965,7 @@ Sanity checks after every step,
 \end_inset
 
  and spectral weight 
-\begin_inset Formula $W_{i}=-\hbar\,(\delta/\pi)\sum_{k}\operatorname{Im}\Gr_{ii}$
+\begin_inset Formula $W_{i}=-\hbar\,(\Delta\omega/\pi)\sum_{k}\operatorname{Im}\Gr_{ii}$
 \end_inset
 
 .
@@ -2433,7 +3029,7 @@ spectral_function.dat
 
 ,
  
-\begin_inset Formula $A_{ii}(\omega)=-2\operatorname{Im}\Gr_{ii}$
+\begin_inset Formula $A_{ii}(\omega)=-2\hbar\operatorname{Im}\Gr_{ii}$
 \end_inset
 
  for every site;
@@ -2744,7 +3340,31 @@ Using your own Hamiltonian
 \end_layout
 
 \begin_layout Standard
-The nearest-neighbour chain of the Model section is only one model. Nothing else in SANCHO depends on it: the Green's functions, bubbles, self-energies, SCF loop and observables see nothing but the matrix 
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:customH"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:chain"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ describes the built-in chain. Nothing else in SANCHO depends on it: the Green's functions, bubbles, self-energies, SCF loop and observables see nothing but the matrix 
 \begin_inset Formula $H$
 \end_inset
 
@@ -4176,7 +4796,7 @@ TOL_REL
 \begin_layout Standard
 \align center
 \begin_inset Tabular
-<lyxtabular version="3" rows="7" columns="2">
+<lyxtabular version="3" rows="9" columns="2">
 <features booktabs="true" tabularvalignment="middle">
 <column alignment="none" valignment="top" special=">{\ttfamily}l">
 <column alignment="none" valignment="top" width="9cm">
@@ -4311,7 +4931,7 @@ order2_asymmetric_leads
 </cell>
 </row>
 <row>
-<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -4320,12 +4940,61 @@ legacy_natoms
 
 \end_inset
 </cell>
-<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+<cell alignment="none" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
 old key names,
  no Broyden keys (defaults) 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+order2_custom_template 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = custom
+\end_layout
+
+\end_inset
+
+ as shipped 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error_unknown_hamiltonian 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+must stop with exit code 1: unknown model 
 \end_layout
 
 \end_inset
@@ -4489,6 +5158,51 @@ build_hamiltonian_from_xyz
 ) is a placeholder:
  element table and bond cutoff are not physical yet.
  
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+L. Kantorovich, 
+\emph on
+Introduction to Green's Function Methods in Many-Body Physics: With Applications to Quantum Transport
+\emph default
+ (Cambridge University Press, 2026), doi:10.1017/9781009790154. Chapter, section and equation numbers cited in this manual are those of the author's manuscript of October 2025 and may differ in the published edition.
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "meir"
+literal "false"
+
+\end_inset
+
+Y. Meir and N. S. Wingreen, Phys. Rev. Lett. 
+\series bold
+68
+\series default
+, 2512 (1992).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "johnson"
+literal "false"
+
+\end_inset
+
+D. D. Johnson, Phys. Rev. B 
+\series bold
+38
+\series default
+, 12807 (1988).
 \end_layout
 
 \end_body

@@ -177,30 +177,33 @@ maketitle
 \end_layout
 
 \begin_layout Abstract
-QUICHOTTE computes the spin-resolved current–voltage characteristics of a helical molecule with spin–orbit coupling (SOC) and an on-site Hubbard interaction,
- coupled to two leads.
- It uses self-consistent non-equilibrium Green's functions (NEGF),
- with the interaction treated to zeroth,
- first (Hartree–Fock) or second order in
+In a corner of Hilbert space, the name of which I have no desire to call to mind, there lived not long since one of those Fortran codes that keep a Green's function in the rack, an old Broyden mixer, a lean energy grid, and a pair of wide-band leads for coursing. A self-energy of rather more second order than first, Hartree–Fock on most nights, the bare zeroth order on Saturdays, and a fast Fourier transform or so extra on Sundays, made away with three-quarters of its CPU hours. They will have it that its name was QUICHOTTE (for here there is some difference of opinion among the authors who write on the subject), but this concerns our tale very little; it is enough that in the telling of it we stray not a hair's breadth from the truth.
+\end_layout
+
+\begin_layout Abstract
+Its one quest is the steady state of an interacting region held between two leads at different bias. Give it any single-particle Hamiltonian with spin, of whatever size and shape, together with an on-site Hubbard interaction
 \begin_inset space ~
 \end_inset
-
 
 \begin_inset Formula $U$
 \end_inset
 
-.
- The code was written to study chirality-induced spin selectivity (CISS).
- The Hamiltonian can be a model helix or a multi-orbital Hamiltonian with spin–orbit coupling from DFTB+
- (s and p orbitals on every atom),
- in which every spatial orbital is a Hubbard site;
- only the interacting and contact orbitals are stored.
- This manual gives the model,
- the equations the code solves,
- the numerical methods,
- a complete reference for the input and output files,
- and the practical workflow.
- The companion code 
+, and it returns the spin-resolved current–voltage characteristics, the populations and spin densities, and the spectral function, by self-consistent non-equilibrium Green's functions (NEGF) on a real-energy grid. The interaction enters only through the self-energy, to zeroth, first (Hartree–Fock) or second order in
+\begin_inset space ~
+\end_inset
+
+\begin_inset Formula $U$
+\end_inset
+
+, the second order evaluated by fast Fourier transform; at every voltage the equations are brought to self-consistency by modified Broyden mixing, and checks reject unphysical solutions. Only the interacting and contact orbitals are stored.
+\end_layout
+
+\begin_layout Abstract
+The Hamiltonian is chosen with a single input key, and nothing else in the code depends on it, so a model of your own needs only one short routine. Several Hamiltonians have already ridden out with it and are documented here in full, each with its own structure: a model helix and an 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helical peptide with spin–orbit coupling, written to study chirality-induced spin selectivity, and multi-orbital Hamiltonians with spin–orbit coupling from DFTB+. This manual sets down the equations the code solves, the numerical methods, how to run it and how to give it a Hamiltonian of your own, and a complete reference for the input and output files. Its faithful squire 
 \emph on
 SANCHO
 \emph default
@@ -214,16 +217,14 @@ SANCHO/
 
 \end_inset
 
-) treats a spinless chain to third order in
+) carries the same machinery, without resolving spin, to third order in
 \begin_inset space ~
 \end_inset
-
 
 \begin_inset Formula $U$
 \end_inset
 
- and has its own manual.
- 
+, and keeps its own manual.
 \end_layout
 
 \begin_layout Standard
@@ -244,7 +245,7 @@ Quick start
 \end_layout
 
 \begin_layout Verbatim
-git clone https://github.com/Aadik1/QUICHOTTE.git && cd QUICHOTTE
+git clone https://github.com/Aadik1/Quichotte-and-Sancho.git QUICHOTTE && cd QUICHOTTE
 \end_layout
 
 \begin_layout Verbatim
@@ -254,7 +255,7 @@ make            # builds bin/quichotte.x (needs gfortran,
 \end_layout
 
 \begin_layout Verbatim
-make test       # 5 regression tests,
+make test       # 14 regression tests,
  a few seconds;
  all must PASS
 \end_layout
@@ -311,6 +312,99 @@ nolink "false"
 
 ).
 \end_layout
+
+\begin_layout Standard
+The example uses the built-in helix model (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:helix"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+examples/
+\end_layout
+
+\end_inset
+
+ also holds annotated inputs for the 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+ model (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helix_from_xyz
+\end_layout
+
+\end_inset
+
+), the two DFTB+ routes (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helicene_dftb_hs
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helicene_dftb
+\end_layout
+
+\end_inset
+
+) and a model of your own (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+custom_model
+\end_layout
+
+\end_inset
+
+, Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
 
 \begin_layout Paragraph
 Build requirements.
@@ -599,6 +693,52 @@ name "sec:model"
 
 \end_layout
 
+\begin_layout Standard
+QUICHOTTE computes steady-state, spin-resolved transport through an interacting region coupled to two leads. This section defines that problem in general: the units, the basis, the Hamiltonian (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:hamiltonian"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+) and the leads (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:leads"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:builtinH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ then describes the Hamiltonians that come with the code.
+\end_layout
+
 
 \begin_layout Subsection
 Units and conventions
@@ -653,16 +793,103 @@ common/constants.f90
 eV/K.
 \end_layout
 
+\begin_layout Standard
+The notation follows Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Chs. 4, 7 and 10"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, and the equations below are written in its conventions: 
+\begin_inset Formula $\omega$
+\end_inset
+
+ is a frequency and 
+\begin_inset Formula $\hbar\omega$
+\end_inset
+
+ the corresponding energy; Fourier transforms are 
+\begin_inset Formula $G(\omega)=\int dt\,e^{i\omega t}G(t)$
+\end_inset
+
+ and 
+\begin_inset Formula $G(t)=\int\frac{d\omega}{2\pi}\,e^{-i\omega t}G(\omega)$
+\end_inset
+
+; the lesser and greater functions are 
+\begin_inset Formula $G_{ab}^{<}(t,t')=\frac{i}{\hbar}\langle c_{b}^{\dagger}(t')c_{a}(t)\rangle$
+\end_inset
+
+ and 
+\begin_inset Formula $G_{ab}^{>}(t,t')=-\frac{i}{\hbar}\langle c_{a}(t)c_{b}^{\dagger}(t')\rangle$
+\end_inset
+
+; and the electron charge is 
+\begin_inset Formula $-e$
+\end_inset
+
+ (
+\begin_inset Formula $e>0$
+\end_inset
+
+). In the code 
+\begin_inset Formula $\hbar=e=1$
+\end_inset
+
+, so 
+\begin_inset Formula $\omega$
+\end_inset
+
+ and 
+\begin_inset Formula $\hbar\omega$
+\end_inset
+
+, and 
+\begin_inset Formula $V$
+\end_inset
+
+ and 
+\begin_inset Formula $eV$
+\end_inset
+
+, are the same numbers.
+\end_layout
+
+
 \begin_layout Subsection
 Basis
 \end_layout
 
 \begin_layout Standard
-The molecule has 
+The central region has 
+\begin_inset Formula $N_{\text{sites}}$
+\end_inset
+
+ sites with one orbital each: a site is one spatial orbital (for the helix 
 \begin_inset Formula $N_{\text{sites}}=N_{\text{ions}}\,N_{\text{turns}}$
 \end_inset
 
- sites with one orbital each.
+; for a DFTB+ Hamiltonian every orbital of every atom is a site, Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:dftb"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
  Every site carries two spin-orbitals,
  numbered 
 \begin_inset Formula 
@@ -691,12 +918,663 @@ Norb
 \begin_inset Formula $z$
 \end_inset
 
-,
- the helix axis.
+ (the helix axis in the helix and peptide models).
 \end_layout
 
 \begin_layout Subsection
-Helix geometry
+Hamiltonian
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:hamiltonian"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+QUICHOTTE treats a central region with the Hamiltonian 
+\begin_inset Formula 
+\begin{equation}
+H=\sum_{ij}\sum_{\sigma\sigma'}h_{i\sigma,j\sigma'}\,c_{i\sigma}^{\dagger}c_{j\sigma'}+\sum_{i}U_{i}\,n_{i\uparrow}n_{i\downarrow},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $h$
+\end_inset
+
+ is any Hermitian 
+\begin_inset Formula $N_{\text{orb}}\times N_{\text{orb}}$
+\end_inset
+
+ matrix in the basis above (the array 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+H
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/hamiltonian.f90
+\end_layout
+
+\end_inset
+
+). On-site energies, hopping of any range and spin–orbit coupling all live in 
+\begin_inset Formula $h$
+\end_inset
+
+, and nothing else in the code (Green's functions, self-energies, self-consistency, observables) depends on its form. The input key 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian
+\end_layout
+
+\end_inset
+
+ chooses the routine that fills it: one of the built-in models of Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:builtinH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+, or one of your own (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The Hubbard term is never put into 
+\begin_inset Formula $h$
+\end_inset
+
+: it enters only through the interaction self-energy (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:sigma"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+), to the order set by 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+order
+\end_layout
+
+\end_inset
+
+. 
+\begin_inset Formula $U_{i}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+U_int
+\end_layout
+
+\end_inset
+
+ on every site, or one value per site from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hubbard_file
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Leads
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:leads"
+
+\end_inset
+
+\end_layout
+
+
+\begin_layout Standard
+Both leads are in the wide-band limit
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.3.8"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+. The left lead couples with a spin-dependent strength to every orbital 
+\begin_inset Formula $i$
+\end_inset
+
+ of the contact atoms 
+\begin_inset Formula $\mathcal{L}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_left_atoms
+\end_layout
+
+\end_inset
+
+, default: the first atom), the right lead to every orbital of 
+\begin_inset Formula $\mathcal{R}$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_right_atoms
+\end_layout
+
+\end_inset
+
+, default: the last atom); 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+setup_leads
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/input_output.f90
+\end_layout
+
+\end_inset
+
+. For the helix, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+custom
+\end_layout
+
+\end_inset
+
+ models an atom is one site, so by default the leads sit on site 1 and on the last site. An atom cannot be in both lists.
+\begin_inset Formula 
+\begin{equation}
+\Gamma_{L}=\sum_{i\in\mathcal{L}}\bigl(\Gamma_{L\uparrow}\,|i{\uparrow}\rangle\langle i{\uparrow}|+\Gamma_{L\downarrow}\,|i{\downarrow}\rangle\langle i{\downarrow}|\bigr),\qquad\Gamma_{R}=\Gamma_{R}\sum_{i\in\mathcal{R}}\sum_{\sigma}|i\sigma\rangle\langle i\sigma|,
+\end{equation}
+
+\end_inset
+
+(
+\begin_inset Formula $\Gamma_{L\uparrow}/\hbar$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL_up
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\Gamma_{L\downarrow}/\hbar$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaL_down
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\Gamma_{R}/\hbar$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+GammaR
+\end_layout
+
+\end_inset
+
+). Their retarded self-energy is 
+\begin_inset Formula $\Sigma_{\text{leads}}^{r}=-\tfrac{i}{2\hbar}(\Gamma_{L}+\Gamma_{R})$
+\end_inset
+
+.
+ Here 
+\begin_inset Formula $\Gamma_{L,R}$
+\end_inset
+
+ are the level-width matrices of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eq. (10.33)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, which carry a factor 
+\begin_inset Formula $\hbar$
+\end_inset
+
+ (they are defined with 
+\begin_inset Formula $\delta(\omega-\epsilon/\hbar)$
+\end_inset
+
+), so the input values are 
+\begin_inset Formula $\Gamma/\hbar$
+\end_inset
+
+, in eV.
+ The bias is applied to the 
+\emph on
+left
+\emph default
+ lead only:
+ 
+\begin_inset Formula 
+\begin{equation}
+f_{L}(\omega)=n_{F}(\hbar\omega+eV),\qquad f_{R}(\omega)=n_{F}(\hbar\omega),\qquad n_{F}(\epsilon)=\frac{1}{e^{\beta(\epsilon-\mu)}+1},\qquad\beta=1/k_{B}T,
+\end{equation}
+
+\end_inset
+
+i.e.
+\begin_inset space \space{}
+\end_inset
+
+
+\begin_inset Formula $\mu_{L}=\mu-eV$
+\end_inset
+
+,
+ 
+\begin_inset Formula $\mu_{R}=\mu$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+fermi
+\end_layout
+
+\end_inset
+
+ in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+src/green_functions.f90
+\end_layout
+
+\end_inset
+
+), as in Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eq. (10.37)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, where 
+\begin_inset Formula $\omega_{L}=\omega+eV/\hbar$
+\end_inset
+
+.
+ Because the bias is asymmetric,
+ the 
+\begin_inset Formula $I$
+\end_inset
+
+–
+\begin_inset Formula $V$
+\end_inset
+
+ curve need not be odd in 
+\begin_inset Formula $V$
+\end_inset
+
+ once 
+\begin_inset Formula $U\neq0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Built-in Hamiltonians
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:builtinH"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The Hamiltonians below come with the code. They were written to study chirality-induced spin selectivity (CISS) in helical molecules and are kept as tested, documented examples of what QUICHOTTE can be given; each has a specific structure, set out in full here. The routine behind each value of 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian
+\end_layout
+
+\end_inset
+
+ and how its number of sites is fixed are listed in Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:customH"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+helix
+\end_layout
+
+\end_inset
+
+ (default): a helical chain with nearest-neighbour hopping and next-nearest-neighbour SOC (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:helix"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+); 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz
+\end_layout
+
+\end_inset
+
+ applies the same terms to positions read from a file.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+peptide
+\end_layout
+
+\end_inset
+
+: an 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helical peptide, one site per residue, with long-range hopping and SOC (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:peptide"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb
+\end_layout
+
+\end_inset
+
+: multi-orbital Hamiltonians with atomic spin–orbit coupling from DFTB+ (Section
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:dftb"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsubsection
+Helix model
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:helix"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The default model (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = helix
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_helix_hamiltonian
+\end_layout
+
+\end_inset
+
+) is the helical chain of Fransson
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "fransson"
+literal "false"
+
+\end_inset
+
+: one orbital per site, nearest-neighbour hopping and a next-nearest-neighbour spin–orbit coupling set by the geometry. Note that Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sects. 10.3.8 and 10.5.3"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ writes the nearest-neighbour hopping as 
+\begin_inset Formula $-t_{\text{hop}}$
+\end_inset
+
+; here 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+ enters with a plus sign, so his 
+\begin_inset Formula $t_{\text{hop}}=2$
+\end_inset
+
+ eV corresponds to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+ = 
+\begin_inset Formula $-2$
+\end_inset
+
+ eV.
 \end_layout
 
 \begin_layout Standard
@@ -831,11 +1709,8 @@ shape
  not on its overall size.
 \end_layout
 
-\begin_layout Subsection
-Hamiltonian
-\end_layout
-
 \begin_layout Standard
+The Hamiltonian is 
 \begin_inset Formula 
 \begin{equation}
 H=\sum_{i\sigma}\varepsilon\,c_{i\sigma}^{\dagger}c_{i\sigma}+t\sum_{i\sigma}\bigl(c_{i\sigma}^{\dagger}c_{i+1,\sigma}+\text{h.c.}\bigr)+\sum_{i}\bigl(c_{i}^{\dagger}\,\mathcal{V}_{i,i+2}\,c_{i+2}+\text{h.c.}\bigr)+\sum_{i}U_{i}\,n_{i\uparrow}n_{i\downarrow},
@@ -880,7 +1755,7 @@ t_hop
  matrix in spin space) 
 \begin_inset Formula 
 \begin{equation}
-\mathcal{V}_{i,i+2}=i\lambda\;\bigl(\hat{\mathbf{d}}_{i,i+1}\times\hat{\mathbf{d}}_{i,i+2}\bigr)\cdot\boldsymbol{\sigma},\qquad\hat{\mathbf{d}}_{i,j}=\frac{\mathbf{r}_{i}-\mathbf{r}_{j}}{|\mathbf{r}_{i}-\mathbf{r}_{j}|},
+\mathcal{V}_{i,i+2}=i\lambda\;\bigl(\hat{\mathbf{d}}_{i,i+1}\times\hat{\mathbf{d}}_{i,i+2}\bigr)\cdot\boldsymbol{\sigma},\qquad\hat{\mathbf{d}}_{i,j}=\frac{\mathbf{r}_{i}-\mathbf{r}_{j}}{|\mathbf{r}_{i}-\mathbf{r}_{j}|},\label{eq:helix-soc}
 \end{equation}
 
 \end_inset
@@ -971,21 +1846,33 @@ hubbard_file
 
 
 \begin_layout Standard
-This is the helix model built by 
+The model 
 \begin_inset Flex Code
 status collapsed
 
 \begin_layout Plain Layout
-build_helix_hamiltonian
+hamiltonian = xyz
 \end_layout
 
 \end_inset
 
-.
- Nothing else in the code depends on it: any other single-particle Hamiltonian can be used instead, as described in Section 
+ applies the same terms to site positions read from 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz_file
+\end_layout
+
+\end_inset
+
+ (Section
+\begin_inset space ~
+\end_inset
+
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "sec:customH"
+reference "sec:xyzH"
 plural "false"
 caps "false"
 noprefix "false"
@@ -993,10 +1880,697 @@ nolink "false"
 
 \end_inset
 
+).
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helical peptide model
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:peptide"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The model 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = peptide
+\end_layout
+
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_peptide_hamiltonian
+\end_layout
+
+\end_inset
+
+) is an 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helical peptide with one site per residue, after Guo and Sun
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eqs. 2–3"
+key "guosun"
+literal "false"
+
+\end_inset
+
+. Unlike the helix above, the twist between neighbouring sites need not divide 
+\begin_inset Formula $2\pi$
+\end_inset
+
+ (an 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helix has 3.6 residues per turn), and every site can couple to several neighbours along the chain. Site 
+\begin_inset Formula $n$
+\end_inset
+
+ sits at 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{r}_{n}=\Bigl(R\cos\phi_{n},\;R\sin\phi_{n},\;(n-1)\,\Delta z\Bigr),\qquad\phi_{n}=n\,h\,\Delta\phi,
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $R$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_radius
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\Delta\phi$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+pep_twist
+\end_layout
+
+\end_inset
+
+ (in degrees), 
+\begin_inset Formula $\Delta z$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+pep_rise
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Formula $h=\pm1$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hand
+\end_layout
+
+\end_inset
+
+. The distance between sites 
+\begin_inset Formula $n$
+\end_inset
+
+ and 
+\begin_inset Formula $n+j$
+\end_inset
+
+ depends only on 
+\begin_inset Formula $j$
+\end_inset
+
+: 
+\begin_inset Formula 
+\begin{equation}
+l_{j}=|\mathbf{r}_{n+j}-\mathbf{r}_{n}|=\sqrt{\bigl(2R\sin(j\Delta\phi/2)\bigr)^{2}+(j\,\Delta z)^{2}}.
+\end{equation}
+
+\end_inset
+
+For the 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helix (
+\begin_inset Formula $R=2.5$
+\end_inset
+
+\begin_inset space ~
+\end_inset
+
+Å, 
+\begin_inset Formula $\Delta\phi=100^{\circ}$
+\end_inset
+
+, 
+\begin_inset Formula $\Delta z=1.5$
+\end_inset
+
+\begin_inset space ~
+\end_inset
+
+Å) this gives 
+\begin_inset Formula $l_{1},\dots,l_{4}=4.11,\,5.77,\,5.15,\,6.24$
+\end_inset
+
+\begin_inset space ~
+\end_inset
+
+Å; note that 
+\begin_inset Formula $l_{3}<l_{2}$
+\end_inset
+
 .
 \end_layout
 
-\begin_layout Subsection
+\begin_layout Standard
+The Hamiltonian is 
+\begin_inset Formula 
+\begin{equation}
+H=\sum_{n\sigma}\varepsilon_{n}\,c_{n\sigma}^{\dagger}c_{n\sigma}+\sum_{n}\sum_{j=1}^{J}t_{j}\sum_{\sigma}\bigl(c_{n\sigma}^{\dagger}c_{n+j,\sigma}+\text{h.c.}\bigr)+H_{\text{so}}+\sum_{n}U_{n}\,n_{n\uparrow}n_{n\downarrow},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $J=\min($
+\end_inset
+
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_range
+\end_layout
+
+\end_inset
+
+\begin_inset Formula $,\,N_{\text{sites}}-1)$
+\end_inset
+
+ and the hopping and SOC decay exponentially with distance, 
+\begin_inset Formula 
+\begin{equation}
+t_{j}=t\,e^{-(l_{j}-l_{1})/l_{c}},\qquad s_{j}=\lambda\,e^{-(l_{j}-l_{1})/l_{c}},
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $t$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lamb
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Formula $l_{c}$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_decay
+\end_layout
+
+\end_inset
+
+. So 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+t_hop
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lamb
+\end_layout
+
+\end_inset
+
+ are the nearest-neighbour values 
+\begin_inset Formula $t_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $s_{1}$
+\end_inset
+
+ of Guo and Sun, who use 
+\begin_inset Formula $s_{1}=0.12\,t_{1}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The on-site energy can include the helix macrodipole as a linear ramp (this is not part of the Guo–Sun model): 
+\begin_inset Formula 
+\begin{equation}
+\varepsilon_{n}=\varepsilon+D\left(\frac{n-1}{N_{\text{sites}}-1}-\frac{1}{2}\right),
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $\varepsilon$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+E_CC
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Formula $D$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dipole_ramp
+\end_layout
+
+\end_inset
+
+. The ramp is spin independent and its mean is 
+\begin_inset Formula $\varepsilon$
+\end_inset
+
+; 
+\begin_inset Formula $D=\varepsilon_{N}-\varepsilon_{1}>0$
+\end_inset
+
+ makes the on-site energy rise from site 1 (left lead) to site 
+\begin_inset Formula $N_{\text{sites}}$
+\end_inset
+
+, and 
+\begin_inset Formula $D=0$
+\end_inset
+
+ (the default) gives exactly the Guo–Sun Hamiltonian.
+\end_layout
+
+\begin_layout Standard
+The spin–orbit term 
+\begin_inset Formula $H_{\text{so}}$
+\end_inset
+
+ is chosen with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+soc_model
+\end_layout
+
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+radial
+\end_layout
+
+\end_inset
+
+ (default; Guo–Sun Eq. 3) acts on every bond kept in the hopping, 
+\begin_inset Formula 
+\begin{equation}
+H_{\text{so}}=\sum_{n}\sum_{j=1}^{J}\Bigl(2i\,s_{j}\cos\phi_{nj}^{-}\;c_{n}^{\dagger}\,(\boldsymbol{\nu}_{nj}\cdot\boldsymbol{\sigma})\,c_{n+j}+\text{h.c.}\Bigr),\qquad\boldsymbol{\nu}_{nj}=\hat{\mathbf{r}}(\phi_{nj}^{+})\times\hat{\mathbf{d}}_{nj},
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $\phi_{nj}^{\pm}=(\phi_{n+j}\pm\phi_{n})/2$
+\end_inset
+
+, 
+\begin_inset Formula $\hat{\mathbf{r}}(\phi)=(\cos\phi,\sin\phi,0)$
+\end_inset
+
+ the radial direction and 
+\begin_inset Formula $\hat{\mathbf{d}}_{nj}=(\mathbf{r}_{n+j}-\mathbf{r}_{n})/l_{j}$
+\end_inset
+
+ the bond direction (note the opposite sign convention to 
+\begin_inset Formula $\hat{\mathbf{d}}_{i,j}$
+\end_inset
+
+ in Eq.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:helix-soc"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+). Since 
+\begin_inset Formula $\cos\phi_{nj}^{-}=\cos(j\Delta\phi/2)$
+\end_inset
+
+, the sign of the SOC changes with 
+\begin_inset Formula $j$
+\end_inset
+
+: for the 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helix the 
+\begin_inset Formula $j=2,3,4$
+\end_inset
+
+ terms have the opposite sign to 
+\begin_inset Formula $j=1$
+\end_inset
+
+. The radial direction is taken at 
+\begin_inset Formula $\phi_{nj}^{+}$
+\end_inset
+
+, not at the midpoint of the chord: for 
+\begin_inset Formula $j=2$
+\end_inset
+
+ (
+\begin_inset Formula $200^{\circ}$
+\end_inset
+
+ apart) the chord midpoint lies on the far side of the axis and would flip the sign.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+torsion
+\end_layout
+
+\end_inset
+
+ is the next-nearest-neighbour term of the helix model, Eq.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:helix-soc"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+, on the bonds 
+\begin_inset Formula $n$
+\end_inset
+
+–
+\begin_inset Formula $(n+2)$
+\end_inset
+
+ of the peptide geometry, with strength 
+\begin_inset Formula $\lambda$
+\end_inset
+
+; it does not decay with 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_decay
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The number of sites comes from the key 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_sites
+\end_layout
+
+\end_inset
+
+, which is required. 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hel_radius
+\end_layout
+
+\end_inset
+
+ has no default for this model and must be given (2.5
+\begin_inset space ~
+\end_inset
+
+Å for the 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helix); the input checks also require 
+\begin_inset Formula $N_{\text{sites}}\ge2$
+\end_inset
+
+, 
+\begin_inset Formula $h=\pm1$
+\end_inset
+
+, 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_range
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $\ge1$
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_decay
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Formula $>0$
+\end_inset
+
+. The defaults 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_range
+\end_layout
+
+\end_inset
+
+ = 1 and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_decay
+\end_layout
+
+\end_inset
+
+ = 1
+\begin_inset space ~
+\end_inset
+
+Å keep only nearest neighbours. Guo and Sun keep every 
+\begin_inset Formula $j$
+\end_inset
+
+ (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_range
+\end_layout
+
+\end_inset
+
+ = 
+\begin_inset Formula $N_{\text{sites}}-1$
+\end_inset
+
+); with 
+\begin_inset Formula $l_{c}=0.9$
+\end_inset
+
+\begin_inset space ~
+\end_inset
+
+Å the terms beyond 
+\begin_inset Formula $j=4$
+\end_inset
+
+ are below 1% of 
+\begin_inset Formula $t_{1}$
+\end_inset
+
+. The leads attach to site 1 and site 
+\begin_inset Formula $N_{\text{sites}}$
+\end_inset
+
+ unless 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_left_atoms
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+lead_right_atoms
+\end_layout
+
+\end_inset
+
+ say otherwise. The routine writes the site positions to 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+peptide_geometry.xyz
+\end_layout
+
+\end_inset
+
+ (which 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = xyz
+\end_layout
+
+\end_inset
+
+ can read back, though it then applies the helix-model terms) and prints 
+\begin_inset Formula $l_{j}$
+\end_inset
+
+, 
+\begin_inset Formula $t_{j}/t$
+\end_inset
+
+ and the end values 
+\begin_inset Formula $\varepsilon_{1}$
+\end_inset
+
+, 
+\begin_inset Formula $\varepsilon_{N}$
+\end_inset
+
+ of the dipole ramp.
+\end_layout
+
+\begin_layout Subsubsection
 Multi-orbital Hamiltonians from DFTB+
 \begin_inset CommandInset label
 LatexCommand label
@@ -1011,7 +2585,19 @@ For a real molecule
 \begin_inset Formula $H$
 \end_inset
 
- can come from DFTB+ (density-functional tight binding), which gives a minimal valence basis on every atom. Two routes are implemented: 
+ can come from DFTB+
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "dftb"
+literal "false"
+
+\end_inset
+
+ (density-functional tight binding), which gives a minimal valence basis on every atom. Two routes are implemented: 
 \begin_inset Flex Code
 status collapsed
 
@@ -1299,7 +2885,19 @@ xyz_file
 
 \end_inset
 
-QUICHOTTE builds the orthogonal (Löwdin) spin–orbit Hamiltonian
+QUICHOTTE builds the orthogonal (Löwdin
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "lowdin"
+literal "false"
+
+\end_inset
+
+) spin–orbit Hamiltonian
 \end_layout
 
 \begin_layout Standard
@@ -1502,212 +3100,6 @@ hamiltonian_matrix.dat
  eV.
 \end_layout
 
-\begin_layout Subsection
-Leads
-\begin_inset CommandInset label
-LatexCommand label
-name "sec:leads"
-
-\end_inset
-
-\end_layout
-
-
-\begin_layout Standard
-Both leads are in the wide-band limit. The left lead couples with a spin-dependent strength to every orbital 
-\begin_inset Formula $i$
-\end_inset
-
- of the contact atoms 
-\begin_inset Formula $\mathcal{L}$
-\end_inset
-
- (
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-lead_left_atoms
-\end_layout
-
-\end_inset
-
-, default: the first atom), the right lead to every orbital of 
-\begin_inset Formula $\mathcal{R}$
-\end_inset
-
- (
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-lead_right_atoms
-\end_layout
-
-\end_inset
-
-, default: the last atom); 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-setup_leads
-\end_layout
-
-\end_inset
-
- in 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-src/input_output.f90
-\end_layout
-
-\end_inset
-
-. For the helix, 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-xyz
-\end_layout
-
-\end_inset
-
- and 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-custom
-\end_layout
-
-\end_inset
-
- models an atom is one site, so by default the leads sit on site 1 and on the last site. An atom cannot be in both lists.
-\begin_inset Formula 
-\begin{equation}
-\Gamma_{L}=\sum_{i\in\mathcal{L}}\bigl(\Gamma_{L\uparrow}\,|i{\uparrow}\rangle\langle i{\uparrow}|+\Gamma_{L\downarrow}\,|i{\downarrow}\rangle\langle i{\downarrow}|\bigr),\qquad\Gamma_{R}=\Gamma_{R}\sum_{i\in\mathcal{R}}\sum_{\sigma}|i\sigma\rangle\langle i\sigma|,
-\end{equation}
-
-\end_inset
-
-(
-\begin_inset Formula $\Gamma_{L\uparrow}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaL_up
-\end_layout
-
-\end_inset
-
-, 
-\begin_inset Formula $\Gamma_{L\downarrow}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaL_down
-\end_layout
-
-\end_inset
-
-, 
-\begin_inset Formula $\Gamma_{R}$
-\end_inset
-
- = 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-GammaR
-\end_layout
-
-\end_inset
-
-). Their retarded self-energy is 
-\begin_inset Formula $\Sigma_{\text{leads}}^{r}=-\tfrac{i}{2}(\Gamma_{L}+\Gamma_{R})$
-\end_inset
-
-.
- The bias is applied to the 
-\emph on
-left
-\emph default
- lead only:
- 
-\begin_inset Formula 
-\begin{equation}
-f_{L}(\omega)=\frac{1}{e^{\beta(\omega-\mu+V)}+1},\qquad f_{R}(\omega)=\frac{1}{e^{\beta(\omega-\mu)}+1},\qquad\beta=1/k_{B}T,
-\end{equation}
-
-\end_inset
-
-i.e.
-\begin_inset space \space{}
-\end_inset
-
-
-\begin_inset Formula $\mu_{L}=\mu-V$
-\end_inset
-
-,
- 
-\begin_inset Formula $\mu_{R}=\mu$
-\end_inset
-
- (
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-fermi
-\end_layout
-
-\end_inset
-
- in 
-\begin_inset Flex Code
-status collapsed
-
-\begin_layout Plain Layout
-src/green_functions.f90
-\end_layout
-
-\end_inset
-
-).
- Because the bias is asymmetric,
- the 
-\begin_inset Formula $I$
-\end_inset
-
-–
-\begin_inset Formula $V$
-\end_inset
-
- curve need not be odd in 
-\begin_inset Formula $V$
-\end_inset
-
- once 
-\begin_inset Formula $U\neq0$
-\end_inset
-
-.
-\end_layout
-
 \begin_layout Section
 Non-equilibrium Green's functions
 \end_layout
@@ -1720,7 +3112,7 @@ Energy grid
 All functions of energy are stored on the uniform grid 
 \begin_inset Formula 
 \begin{equation}
-\omega_{k}=\omega_{\text{init}}+k\,\delta,\qquad k=1,\dots,N_{\omega},\qquad\omega_{\text{init}}=\epsilon_{\text{min}}-\code{dw},\qquad N_{\omega}=\Bigl\lfloor\frac{\epsilon_{\text{max}}+\code{up}-\omega_{\text{init}}}{\delta}\Bigr\rfloor,
+\hbar\omega_{k}=\hbar\omega_{\text{init}}+k\,\delta,\qquad k=1,\dots,N_{\omega},\qquad\hbar\omega_{\text{init}}=\epsilon_{\text{min}}-\code{dw},\qquad N_{\omega}=\Bigl\lfloor\frac{\epsilon_{\text{max}}+\code{up}-\hbar\omega_{\text{init}}}{\delta}\Bigr\rfloor,
 \end{equation}
 
 \end_inset
@@ -1787,6 +3179,39 @@ nolink "false"
  warns if spectral weight is missing).
 \end_layout
 
+\begin_layout Standard
+The step 
+\begin_inset Formula $\delta$
+\end_inset
+
+ is an energy; the corresponding frequency step is 
+\begin_inset Formula $\Delta\omega=\delta/\hbar$
+\end_inset
+
+, so every frequency integral 
+\begin_inset Formula $\int\frac{d\omega}{2\pi}$
+\end_inset
+
+ of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ becomes 
+\begin_inset Formula $\frac{\Delta\omega}{2\pi}\sum_{k}$
+\end_inset
+
+ on the grid.
+\end_layout
+
+
 \begin_layout Subsection
 Dyson and Keldysh equations
 \end_layout
@@ -1849,6 +3274,80 @@ nolink "false"
 ).
 \end_layout
 
+\begin_layout Standard
+Eqs.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:dyson"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+–
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:greater"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+ are Eqs. (10.130)–(10.132) and (10.142) of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+, with the wide-band embedding self-energies 
+\begin_inset Formula $\mp\frac{i}{2\hbar}\Gamma$
+\end_inset
+
+ and 
+\begin_inset Formula $\Sigma_{\text{leads}}^{<}=\frac{i}{\hbar}(f_{L}\Gamma_{L}+f_{R}\Gamma_{R})$
+\end_inset
+
+ (Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eqs. (10.34)–(10.38)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+). Because the interaction self-energy has an imaginary part at every frequency, the extra term of the full Keldysh equation vanishes (Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.5.1"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+).
+\end_layout
+
+
 
 \begin_layout Subsection
 Equal-time quantities
@@ -1857,7 +3356,7 @@ Equal-time quantities
 \begin_layout Standard
 \begin_inset Formula 
 \begin{equation}
-\Gl(t{=}0)=\frac{\delta}{2\pi}\sum_{k}\Gl(\omega_{k}),\qquad n_{i\sigma}=-i\hbar\,\Gl_{i\sigma,i\sigma}(t{=}0),\qquad\langle S_{\alpha}\rangle_{i}=-\frac{i\hbar^{2}}{2}\Tr_{\sigma}\!\bigl[\sigma_{\alpha}\,\Gl_{ii}(t{=}0)\bigr],
+\Gl(t{=}0)=\int\!\frac{d\omega}{2\pi}\,\Gl(\omega)\simeq\frac{\Delta\omega}{2\pi}\sum_{k}\Gl(\omega_{k}),\qquad n_{i\sigma}=-i\hbar\,\Gl_{i\sigma,i\sigma}(t{=}0),\qquad\langle S_{\alpha}\rangle_{i}=-\frac{i\hbar^{2}}{2}\Tr_{\sigma}\!\bigl[\sigma_{\alpha}\,\Gl_{ii}(t{=}0)\bigr],
 \end{equation}
 
 \end_inset
@@ -2033,7 +3532,7 @@ src/scf.f90
 ) 
 \begin_inset Formula 
 \begin{equation}
-J_{\sigma}=\frac{1}{\hbar}\frac{\delta}{2\pi}\sum_{k}\operatorname{Re}\Tr_{\sigma}\Bigl\{ i\,\Gamma_{L}\Bigl[\bigl(f_{L}(\omega_{k})-1\bigr)\Gl(\omega_{k})-f_{L}(\omega_{k})\,\Gg(\omega_{k})\Bigr]\Bigr\},
+J_{\sigma}=\frac{1}{\hbar}\frac{\Delta\omega}{2\pi}\sum_{k}\operatorname{Re}\Tr_{\sigma}\Bigl\{ i\,\Gamma_{L}\Bigl[\bigl(f_{L}(\omega_{k})-1\bigr)\Gl(\omega_{k})-f_{L}(\omega_{k})\,\Gg(\omega_{k})\Bigr]\Bigr\},
 \end{equation}
 
 \end_inset
@@ -2067,9 +3566,40 @@ nolink "false"
 \begin_inset Formula $-\bigl[\Gl+f_{L}(\Gr-\Ga)\bigr]$
 \end_inset
 
-,
- so this is minus the Meir–Wingreen expression 
-\begin_inset Formula $\tfrac{i}{\hbar}\int\!\tfrac{d\omega}{2\pi}\Tr\{\Gamma_{L}[\Gl+f_{L}(\Gr-\Ga)]\}$
+, so 
+\begin_inset Formula $J_{\sigma}$
+\end_inset
+
+ is the electron flux into the left lead, 
+\begin_inset Formula $J_{L}=\dot{N}_{L}$
+\end_inset
+
+, of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Eqs. (10.137), (10.139)"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ for one spin (the factor 2 there counts both spins), i.e. minus the Meir–Wingreen expression
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "meir"
+literal "false"
+
+\end_inset
+
+ 
+\begin_inset Formula $\tfrac{i}{\hbar}\int\!\tfrac{d\omega}{2\pi}\Tr_{\sigma}\{\Gamma_{L}[\Gl+f_{L}(\Gr-\Ga)]\}$
 \end_inset
 
 .
@@ -2142,6 +3672,75 @@ src/self_energies.f90
 
 .
 \end_layout
+
+\begin_layout Standard
+The diagrams are those of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 8.3, Fig. 8.1"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+ in the Hubbard limit, projected onto real times with the Langreth rules (Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 7.5"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+). Because they are evaluated with the self-consistent 
+\begin_inset Formula $G$
+\end_inset
+
+, orders 1 and 2 together form the self-consistent second Born approximation of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after "Sect. 10.5.3"
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+. The 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ spin structure is needed because spin–orbit coupling makes 
+\begin_inset Formula $G$
+\end_inset
+
+ non-diagonal in spin; for a spin-diagonal 
+\begin_inset Formula $G$
+\end_inset
+
+ the expressions below reduce to those of Ref.
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+.
+\end_layout
+
 
 \begin_layout Subsection
 First order (Hartree–Fock),
@@ -2303,7 +3902,7 @@ adj2
 
 ,
  weighted by 
-\begin_inset Formula $(\delta/2\pi)^{2}$
+\begin_inset Formula $(\Delta\omega/2\pi)^{2}$
 \end_inset
 
 .
@@ -2324,8 +3923,20 @@ sigma2_compute
 
 \end_inset
 
-,
- FFTW).
+, FFTW
+\begin_inset space ~
+\end_inset
+
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "fftw"
+literal "false"
+
+\end_inset
+
+).
+
  Each element of 
 \begin_inset Formula $\Gr$
 \end_inset
@@ -2791,29 +4402,19 @@ Modified Broyden mixing
 \begin_inset Formula $F(x)=0$
 \end_inset
 
- is solved by Johnson's modified Broyden method (D.
+ is solved by Johnson's modified Broyden method
 \begin_inset space ~
 \end_inset
 
-D.
-\begin_inset space ~
+\begin_inset CommandInset citation
+LatexCommand cite
+after ""
+key "johnson"
+literal "false"
+
 \end_inset
 
-Johnson,
- Phys.
-\begin_inset space \space{}
-\end_inset
-
-Rev.
-\begin_inset space \space{}
-\end_inset
-
-B 
-\series bold
-38
-\series default
-,
- 12807 (1988);
+ (
  
 \begin_inset Flex Code
 status collapsed
@@ -3026,7 +4627,7 @@ common/scf_checks.f90
  
 \begin_inset Formula 
 \[
-n_{a}=-i\hbar\tfrac{\delta}{2\pi}{\textstyle \sum_{k}\Gl_{aa}(\omega_{k}),\qquad W_{a}=-\hbar\tfrac{\delta}{\pi}{\textstyle \sum_{k}\operatorname{Im}\Gr_{aa}(\omega_{k}).}}
+n_{a}=-i\hbar\tfrac{\Delta\omega}{2\pi}{\textstyle \sum_{k}\Gl_{aa}(\omega_{k}),\qquad W_{a}=-\hbar\tfrac{\Delta\omega}{\pi}{\textstyle \sum_{k}\operatorname{Im}\Gr_{aa}(\omega_{k}).}}
 \]
 
 \end_inset
@@ -3345,7 +4946,7 @@ examples/helix_4x2_order2/input.dat
 
 \begin_layout Standard
 \begin_inset Tabular
-<lyxtabular version="3" rows="39" columns="4">
+<lyxtabular version="3" rows="45" columns="4">
 <features booktabs="true" islongtable="true" longtabularalignment="center">
 <column alignment="none" valignment="top" special=">{\ttfamily}l">
 <column alignment="left" valignment="top">
@@ -3554,6 +5155,27 @@ helix
 \end_inset
 
 , 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+peptide
+\end_layout
+
+\end_inset
+
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:peptide"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+), 
 \begin_inset Flex Code
 status collapsed
 
@@ -4051,7 +5673,7 @@ from model
 \begin_inset Text
 
 \begin_layout Plain Layout
-number of sites; required for custom, must agree with the model otherwise 
+number of sites; required for peptide and custom, must agree with the model otherwise 
 \end_layout
 
 \end_inset
@@ -4193,7 +5815,7 @@ hel_radius
 \begin_inset Text
 
 \begin_layout Plain Layout
-helix only 
+helix, peptide 
 \end_layout
 
 \end_inset
@@ -4234,7 +5856,7 @@ hand
 \begin_inset Text
 
 \begin_layout Plain Layout
-helix only 
+helix (peptide: 1) 
 \end_layout
 
 \end_inset
@@ -4261,6 +5883,323 @@ helix only
 \end_inset
 
  left-handed 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+pep_twist 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+100
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: twist 
+\begin_inset Formula $\Delta\phi$
+\end_inset
+
+ between neighbouring sites [deg] (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:peptide"
+plural "false"
+caps "false"
+noprefix "false"
+nolink "false"
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+pep_rise 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1.5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: rise 
+\begin_inset Formula $\Delta z$
+\end_inset
+
+ per site along the axis [Å]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hop_range 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: site 
+\begin_inset Formula $n$
+\end_inset
+
+ couples to 
+\begin_inset Formula $n+1,\dots,n+J$
+\end_inset
+
+; 
+\begin_inset Formula $J$
+\end_inset
+
+ = 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hop_range
+\end_layout
+
+\end_inset
+
+ (capped at 
+\begin_inset Formula $N_{\text{sites}}-1$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hop_decay 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1.0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: decay length 
+\begin_inset Formula $l_{c}$
+\end_inset
+
+ of 
+\begin_inset Formula $t_{j}$
+\end_inset
+
+ and 
+\begin_inset Formula $s_{j}$
+\end_inset
+
+ [Å]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+soc_model 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+radial
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+radial
+\end_layout
+
+\end_inset
+
+ (Guo–Sun, every bond) or 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+torsion
+\end_layout
+
+\end_inset
+
+ (bonds 
+\begin_inset Formula $n$
+\end_inset
+
+–
+\begin_inset Formula $(n+2)$
+\end_inset
+
+ as in the helix)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dipole_ramp 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide: helix dipole as a linear on-site ramp, 
+\begin_inset Formula $D=\varepsilon_{N}-\varepsilon_{1}$
+\end_inset
+
+ [eV]
 \end_layout
 
 \end_inset
@@ -4344,7 +6283,11 @@ nearest-neighbour hopping
 \begin_inset Formula $t$
 \end_inset
 
- [eV] 
+ [eV] (peptide: 
+\begin_inset Formula $t_{1}$
+\end_inset
+
+) 
 \end_layout
 
 \end_inset
@@ -4364,7 +6307,7 @@ lamb
 \begin_inset Text
 
 \begin_layout Plain Layout
-helix, xyz 
+helix, peptide, xyz 
 \end_layout
 
 \end_inset
@@ -4386,7 +6329,11 @@ SOC strength
 \begin_inset Formula $\lambda$
 \end_inset
 
- [eV] 
+ [eV] (peptide: 
+\begin_inset Formula $s_{1}$
+\end_inset
+
+) 
 \end_layout
 
 \end_inset
@@ -5352,7 +7299,7 @@ name "sec:output"
 
 \begin_layout Standard
 \begin_inset Tabular
-<lyxtabular version="3" rows="9" columns="2">
+<lyxtabular version="3" rows="10" columns="2">
 <features booktabs="true" islongtable="true" longtabularalignment="center">
 <column alignment="none" valignment="top" special=">{\ttfamily}p{5.0cm}">
 <column alignment="none" valignment="top" width="10.2cm">
@@ -5564,7 +7511,7 @@ spectral_function.dat
 
 ,
  
-\begin_inset Formula $A_{aa}(\omega)=-2\operatorname{Im}\Gr_{aa}$
+\begin_inset Formula $A_{aa}(\omega)=-2\hbar\operatorname{Im}\Gr_{aa}$
 \end_inset
 
  for every spin-orbital;
@@ -5676,6 +7623,36 @@ status collapsed
 
 \begin_layout Plain Layout
 write_hamiltonian = T
+\end_layout
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+peptide_geometry.xyz
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+site positions of the peptide model [Å] (
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+hamiltonian = peptide
 \end_layout
 
 \end_inset
@@ -6000,15 +7977,13 @@ name "sec:customH"
 \end_layout
 
 \begin_layout Standard
-The helix of Section
+Section
 \begin_inset space ~
-
 \end_inset
-
 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "sec:model"
+reference "sec:builtinH"
 plural "false"
 caps "false"
 noprefix "false"
@@ -6016,7 +7991,7 @@ nolink "false"
 
 \end_inset
 
- is only one model. Nothing else in QUICHOTTE depends on it: the Green's functions, self-energies, SCF loop and observables see nothing but the matrix 
+ describes the built-in models. Nothing else in QUICHOTTE depends on them: the Green's functions, self-energies, SCF loop and observables see nothing but the matrix 
 \begin_inset Formula $H$
 \end_inset
 
@@ -6041,7 +8016,7 @@ hamiltonian
 \align center
 
 \begin_inset Tabular 
-<lyxtabular version="3" rows="4" columns="3">
+<lyxtabular version="3" rows="7" columns="3">
 <features booktabs="true" tabularvalignment="middle" tabularwidth="0pt">
 <column alignment="none" valignment="top" special=">{\ttfamily}l">
 <column alignment="left" valignment="top">
@@ -6165,6 +8140,138 @@ N_turns
 \end_inset
 
  
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+peptide  
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_peptide_hamiltonian
+\end_layout
+
+\end_inset 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+the key 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+N_sites
+\end_layout
+
+\end_inset 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+dftb_hs  
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_dftb_hs
+\end_layout
+
+\end_inset 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+orbitals of the atoms in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+xyz_file
+\end_layout
+
+\end_inset 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="none" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+dftb  
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+build_hamiltonian_from_dftb
+\end_layout
+
+\end_inset 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+orbitals in 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+ham_file
+\end_layout
+
+\end_inset 
 \end_layout
 
 \end_inset
@@ -6316,7 +8423,26 @@ xyz
 
 \end_inset
 
-, in which case it must agree with the model.
+ (and for \begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb_hs
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+dftb
+\end_layout
+
+\end_inset
+
+), in which case it must agree with the model.
 \end_layout
 
 \begin_layout Subsection
@@ -7048,6 +9174,16 @@ hamiltonian = xyz
 \end_layout
 
 \begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:xyzH"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 If your molecule has the same kind of terms as the helix (nearest-neighbour hopping 
 \begin_inset Flex Code
 status collapsed
@@ -7394,7 +9530,11 @@ Hamiltonian
 \begin_layout Plain Layout
 
 \size small
-helix, from 
+helix, 
+\begin_inset Formula $\alpha$
+\end_inset
+
+-helical peptide, from 
 \begin_inset Flex Code
 status collapsed
 
@@ -9274,6 +11414,130 @@ dftb_hs
  is evaluated in the Löwdin orbitals.
 \end_layout
 
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "kantorovich"
+literal "false"
+
+\end_inset
+
+L. Kantorovich, 
+\emph on
+Introduction to Green's Function Methods in Many-Body Physics: With Applications to Quantum Transport
+\emph default
+ (Cambridge University Press, 2026), doi:10.1017/9781009790154. Chapter, section and equation numbers cited in this manual are those of the author's manuscript of October 2025 and may differ in the published edition.
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "fransson"
+literal "false"
+
+\end_inset
+
+J. Fransson, J. Phys. Chem. Lett. 
+\series bold
+10
+\series default
+, 7126 (2019).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "guosun"
+literal "false"
+
+\end_inset
+
+A.-M. Guo and Q.-F. Sun, Proc. Natl. Acad. Sci. USA 
+\series bold
+111
+\series default
+, 11658 (2014).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "dftb"
+literal "false"
+
+\end_inset
+
+B. Hourahine 
+\emph on
+et al.
+\emph default
+, J. Chem. Phys. 
+\series bold
+152
+\series default
+, 124101 (2020).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "lowdin"
+literal "false"
+
+\end_inset
+
+P.-O. Löwdin, J. Chem. Phys. 
+\series bold
+18
+\series default
+, 365 (1950).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "meir"
+literal "false"
+
+\end_inset
+
+Y. Meir and N. S. Wingreen, Phys. Rev. Lett. 
+\series bold
+68
+\series default
+, 2512 (1992).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "fftw"
+literal "false"
+
+\end_inset
+
+M. Frigo and S. G. Johnson, Proc. IEEE 
+\series bold
+93
+\series default
+, 216 (2005).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "johnson"
+literal "false"
+
+\end_inset
+
+D. D. Johnson, Phys. Rev. B 
+\series bold
+38
+\series default
+, 12807 (1988).
+\end_layout
 
 \end_body
 \end_document
